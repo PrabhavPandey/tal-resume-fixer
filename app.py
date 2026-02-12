@@ -287,38 +287,42 @@ def get_tal_response(user_context: str, max_tokens: int = 300) -> str:
 
 
 def extract_company_and_role(jd_text: str) -> tuple[str, str]:
-    """Extract company name and role from JD text."""
-    # Try to find company name - usually at the start or after "at" or "Company:"
-    company = "the company"
-    role = "this role"
+    """Extract company name and role from JD text using Gemini."""
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=f"""Extract the company name and job title from this job description.
 
-    # Common patterns for company names
-    lines = jd_text.split('\n')[:10]
-    for line in lines:
-        line_lower = line.lower().strip()
-        # Skip empty lines
-        if not line_lower:
-            continue
-        # Look for company indicators
-        if any(x in line_lower for x in ['about us', 'about ', 'company:', 'at ']):
-            # Extract the company name
-            words = line.split()
-            if len(words) >= 2:
-                company = ' '.join(words[:3]).strip(':-–—')
-                break
-        # First substantial line might be company name
-        if len(line.strip()) > 3 and len(line.strip()) < 50:
-            company = line.strip().split('-')[0].split('|')[0].strip()
-            break
+JOB DESCRIPTION:
+{jd_text[:2000]}
 
-    # Try to find role
-    for line in lines:
-        line_lower = line.lower()
-        if any(x in line_lower for x in ['engineer', 'analyst', 'manager', 'developer', 'designer', 'scientist', 'intern', 'associate', 'lead', 'senior', 'junior']):
-            role = line.strip().split('-')[0].split('|')[0].strip()[:60]
-            break
+Reply in EXACTLY this format (just two lines, nothing else):
+COMPANY: [company name]
+ROLE: [job title]
 
-    return company, role
+If you can't find the company name, write "COMPANY: this company"
+If you can't find the role, write "ROLE: this role"
+""",
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=100,
+            ),
+        )
+        
+        text = response.text.strip()
+        company = "this company"
+        role = "this role"
+        
+        for line in text.split('\n'):
+            if line.upper().startswith('COMPANY:'):
+                company = line.split(':', 1)[1].strip()
+            elif line.upper().startswith('ROLE:'):
+                role = line.split(':', 1)[1].strip()
+        
+        return company, role
+    except Exception as e:
+        print(f"Error extracting company/role: {e}")
+        return "this company", "this role"
 
 
 def research_company_insights(company: str, role: str) -> str:
@@ -994,17 +998,26 @@ elif st.session_state.stage == "done":
     st.markdown("---")
 
     if st.session_state.pdf_bytes:
-        # ── In-browser PDF preview ──
+        # ── In-browser PDF preview using object tag (more compatible) ──
         pdf_base64 = base64.b64encode(st.session_state.pdf_bytes).decode("utf-8")
-        pdf_iframe = (
-            f'<iframe src="data:application/pdf;base64,{pdf_base64}" '
-            f'width="100%" height="700" '
-            f'style="border: 1px solid #333; border-radius: 8px;" '
-            f'type="application/pdf">'
-            f"</iframe>"
-        )
-        st.markdown(pdf_iframe, unsafe_allow_html=True)
-
+        
+        # Use object tag with fallback - works better across browsers
+        pdf_display = f'''
+        <object data="data:application/pdf;base64,{pdf_base64}" 
+                type="application/pdf" 
+                width="100%" 
+                height="600"
+                style="border: 1px solid #444; border-radius: 8px;">
+            <embed src="data:application/pdf;base64,{pdf_base64}" 
+                   type="application/pdf"
+                   width="100%" 
+                   height="600" />
+        </object>
+        '''
+        st.markdown(pdf_display, unsafe_allow_html=True)
+        
+        # Also show a message about downloading
+        st.caption("📄 preview above • download below for best quality")
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ── Download buttons ──
