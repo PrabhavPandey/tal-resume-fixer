@@ -326,6 +326,12 @@ If unknown, use "Unknown Company" or "Unknown Role".""",
         company = company.strip('"\'')
         role = role.strip('"\'')
         
+        # Smoother fallback
+        if "unknown" in company.lower():
+            company = "this company"
+        if "unknown" in role.lower():
+            role = "this role"
+        
         return company, role
     except Exception as e:
         print(f"Error extracting company/role: {e}")
@@ -500,6 +506,15 @@ def format_analysis_as_tal(analysis: dict) -> str:
 
     company = analysis.get("company", "the company")
     role = analysis.get("role", "this role")
+
+    # Fix "role role" redundancy
+    if role.lower() == "this role" or role.lower() == "unknown role":
+        role_display = "this role"
+    elif role.lower().endswith(" role"):
+        role_display = role
+    else:
+        role_display = f"{role} role"
+
     good = analysis.get("whats_good", [])
     fixing = analysis.get("needs_fixing", [])
     changes = analysis.get("what_ill_change", [])
@@ -510,60 +525,64 @@ def format_analysis_as_tal(analysis: dict) -> str:
 
     lines = []
 
-    lines.append(f"alright i've analyzed your resume against this {role} role at {company}\n")
+    lines.append(f"alright i've analyzed your resume for the **{role_display}** at **{company}**\n\n")
 
     # Show missing keywords if any
     if keywords_missing and len(keywords_missing) > 0 and keywords_missing[0]:
         missing_str = ", ".join(keywords_missing[:5])
-        lines.append(f"jd keywords you're missing: {missing_str.lower()}\n")
+        lines.append(f"**missing keywords:** {missing_str.lower()}\n\n")
 
-    lines.append("what's already working:")
+    lines.append("**what's already working:**")
     for item in good[:3]:
         if isinstance(item, dict):
             point = item.get("point", "").lower()
             alignment = item.get("jd_alignment", "") or item.get("why", "")
-            lines.append(f"  → {point}")
+            lines.append(f"- {point}")
             if alignment:
-                lines.append(f"    (jd match: {alignment.lower()})")
+                lines.append(f"  *({alignment.lower()})*")
         else:
-            lines.append(f"  → {str(item).lower()}")
+            lines.append(f"- {str(item).lower()}")
+    lines.append("")
 
-    lines.append("\nwhat needs fixing:")
+    lines.append("**what needs fixing:**")
     for item in fixing[:3]:
         if isinstance(item, dict):
             issue = item.get("issue", "").lower()
             jd_req = item.get("jd_requirement", "")
             impact = item.get("impact", "")
-            lines.append(f"  → {issue}")
+            lines.append(f"- {issue}")
             if jd_req:
-                lines.append(f"    (jd asks for: {jd_req.lower()})")
+                lines.append(f"  *(jd asks for: {jd_req.lower()})*")
             if impact:
-                lines.append(f"    (impact: {impact.lower()})")
+                lines.append(f"  *(impact: {impact.lower()})*")
         else:
-            lines.append(f"  → {str(item).lower()}")
+            lines.append(f"- {str(item).lower()}")
+    lines.append("")
 
     # Show ATS issues if any
     if ats_issues and len(ats_issues) > 0 and ats_issues[0]:
-        lines.append("\nats/format issues:")
+        lines.append("**ats/format issues:**")
         for issue in ats_issues[:2]:
             if issue:
-                lines.append(f"  ⚠ {issue.lower()}")
+                lines.append(f"- ⚠ {issue.lower()}")
+        lines.append("")
 
-    lines.append("\nwhat i'm gonna change:")
+    lines.append("**what i'm gonna change:**")
     for item in changes[:4]:
         if isinstance(item, dict):
             change = item.get("change", "").lower()
             jd_rationale = item.get("jd_rationale", "") or item.get("rationale", "")
             company_insight = item.get("company_insight", "")
-            lines.append(f"  → {change}")
+            lines.append(f"- {change}")
             if jd_rationale:
-                lines.append(f"    (why: {jd_rationale.lower()})")
+                lines.append(f"  *(why: {jd_rationale.lower()})*")
             if company_insight:
-                lines.append(f"    ({company.lower()} insight: {company_insight.lower()})")
+                lines.append(f"  *({company.lower()} insight: {company_insight.lower()})*")
         else:
-            lines.append(f"  → {str(item).lower()}")
+            lines.append(f"- {str(item).lower()}")
+    lines.append("")
 
-    lines.append(f"\nresume score: {before} → {after}")
+    lines.append(f"**resume score:** {before} → {after}")
     lines.append("\nlet me cook")
 
     return "\n".join(lines)
