@@ -32,16 +32,18 @@ st.markdown("""
 <style>
     .block-container {
         max-width: 740px;
-        padding-top: 2rem;
+        padding-top: 4rem;
     }
+    /* Hide Streamlit's default header to avoid overlap */
     header[data-testid="stHeader"] {
-        background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+        background: transparent;
     }
     .main-title {
         text-align: center;
         font-size: 2.2rem;
         font-weight: 700;
         margin-bottom: 0;
+        margin-top: 1rem;
         color: #f5f5f5;
     }
     .subtitle {
