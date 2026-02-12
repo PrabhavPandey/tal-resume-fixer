@@ -232,7 +232,7 @@ class TalAgent:
 
     def chat(self, user_msg: str, context: str = "") -> str:
         """Get a simple chat response from Tal."""
-        prompt = f"{TAL_SYSTEM_PROMPT}\n\nContext: {context}\nUser: {user_msg}\nTal:"
+        prompt = f"{TAL_SYSTEM_PROMPT}\n\nContext: {context}\nUser: {user_msg}\nTal (reply to User, do not repeat Context):"
         response = self.client.models.generate_content(
             model=MODEL_NAME,
             contents=prompt,
@@ -251,6 +251,11 @@ class TalAgent:
             return text.strip(), len(reader.pages)
         except Exception as e:
             return f"Error reading PDF: {e}", 0
+
+    def extract_links(self, text: str) -> str:
+        """Extract links from text to ensure preservation."""
+        links = re.findall(r'(https?://[^\s]+|www\.[^\s]+)', text)
+        return "\n".join(set(links))
 
     def analyze_resume(self, resume_text: str, jd_text: str) -> dict:
         """
@@ -316,6 +321,7 @@ class TalAgent:
         
         company = analysis.get("company_name", "the company")
         role = analysis.get("role_title", "the role")
+        links = self.extract_links(resume_text)
         
         prompt = f"""
         You are an expert Resume Writer using LaTeX.
@@ -330,6 +336,15 @@ class TalAgent:
         5. PRESERVE ALL LINKS (GitHub, LinkedIn, Projects) using \\href{{url}}{{text}}.
         6. Use action verbs and include JD keywords naturally.
         7. Escape LaTeX special chars (%, $, &, #, _) properly (\\%, \\$, etc).
+        
+        FORMATTING RULES:
+        - MAX 3 bullet points per role/project.
+        - MAX 2 lines per bullet point.
+        - NO huge walls of text. Be punchy.
+        - IF A LINK WAS IN THE ORIGINAL RESUME, IT MUST BE IN THE NEW ONE.
+        
+        LINKS FOUND IN ORIGINAL RESUME (MUST PRESERVE):
+        {links}
         
         TEMPLATE TO USE:
         {LATEX_TEMPLATE}
@@ -396,7 +411,7 @@ def render_chat_message(role, content, avatar=None):
     with st.chat_message(role, avatar=avatar):
         if role == "assistant":
             # Tal's specific formatting
-            st.markdown(content) # Use markdown for the analysis structure
+            st.markdown(content, unsafe_allow_html=True) # Use markdown for the analysis structure
         else:
             st.write(content)
 
@@ -444,7 +459,19 @@ def format_analysis_display(analysis: dict) -> str:
             lines.append(f"  *(why: {item.get('rationale', '').lower()})*")
     lines.append("") # Spacer
     
-    lines.append(f"**score jump:** {analysis.get('score_before')} → {analysis.get('score_after')}")
+    # Score Jump - Green Block
+    before = analysis.get('score_before', 50)
+    after = analysis.get('score_after', 85)
+    
+    score_html = f"""
+    <div style="background-color: rgba(74, 222, 128, 0.1); border: 1px solid #4ade80; border-radius: 8px; padding: 16px; margin-top: 10px; margin-bottom: 10px;">
+        <p style="margin: 0; color: #4ade80; font-weight: bold; font-size: 1.1em; text-align: center;">
+            🚀 Score Jump: {before} → {after}
+        </p>
+    </div>
+    """
+    
+    lines.append(score_html)
     lines.append("\nlet me cook")
     
     return "\n".join(lines)
