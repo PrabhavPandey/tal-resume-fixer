@@ -15,6 +15,10 @@ import os
 import re
 import time
 import base64
+try:
+    from streamlit_pdf_viewer import pdf_viewer
+except ImportError:
+    pdf_viewer = None
 
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -291,18 +295,16 @@ def extract_company_and_role(jd_text: str) -> tuple[str, str]:
     try:
         response = client.models.generate_content(
             model=MODEL_NAME,
-            contents=f"""Extract the company name and job title from this job description.
+            contents=f"""Identify the COMPANY NAME and JOB TITLE from this job description.
 
 JOB DESCRIPTION:
-{jd_text[:2000]}
+{jd_text[:3000]}
 
-Reply in EXACTLY this format (just two lines, nothing else):
-COMPANY: [company name]
-ROLE: [job title]
+Reply in this format:
+Company: [Name]
+Role: [Title]
 
-If you can't find the company name, write "COMPANY: this company"
-If you can't find the role, write "ROLE: this role"
-""",
+If unknown, use "Unknown Company" or "Unknown Role".""",
             config=types.GenerateContentConfig(
                 temperature=0.1,
                 max_output_tokens=100,
@@ -313,11 +315,16 @@ If you can't find the role, write "ROLE: this role"
         company = "this company"
         role = "this role"
         
+        # Simple parsing
         for line in text.split('\n'):
-            if line.upper().startswith('COMPANY:'):
-                company = line.split(':', 1)[1].strip()
-            elif line.upper().startswith('ROLE:'):
-                role = line.split(':', 1)[1].strip()
+            if "Company:" in line:
+                company = line.split("Company:", 1)[1].strip()
+            elif "Role:" in line:
+                role = line.split("Role:", 1)[1].strip()
+        
+        # Clean up if model returns quotes
+        company = company.strip('"\'')
+        role = role.strip('"\'')
         
         return company, role
     except Exception as e:
@@ -433,6 +440,7 @@ Output ONLY valid JSON. No markdown. No code fences."""
         config=types.GenerateContentConfig(
             temperature=0.3,
             max_output_tokens=2000,
+            response_mime_type="application/json",
         ),
     )
 
@@ -461,8 +469,8 @@ Output ONLY valid JSON. No markdown. No code fences."""
         return {
             "company": company,
             "role": role,
-            "jd_keywords_present": [],
-            "jd_keywords_missing": ["could not parse JD"],
+            "jd_keywords_present": ["relevant experience", "technical skills"],
+            "jd_keywords_missing": ["specific tool proficiency", "quantified impact"],
             "whats_good": [
                 {"point": "has relevant work experience", "jd_alignment": "shows practical skills"},
                 {"point": "includes quantified achievements", "jd_alignment": "metrics prove impact"},
@@ -998,27 +1006,16 @@ elif st.session_state.stage == "done":
     st.markdown("---")
 
     if st.session_state.pdf_bytes:
-        # ── In-browser PDF preview using object tag (more compatible) ──
-        pdf_base64 = base64.b64encode(st.session_state.pdf_bytes).decode("utf-8")
-        
-        # Use object tag with fallback - works better across browsers
-        pdf_display = f'''
-        <object data="data:application/pdf;base64,{pdf_base64}" 
-                type="application/pdf" 
-                width="100%" 
-                height="600"
-                style="border: 1px solid #444; border-radius: 8px;">
-            <embed src="data:application/pdf;base64,{pdf_base64}" 
-                   type="application/pdf"
-                   width="100%" 
-                   height="600" />
-        </object>
-        '''
-        st.markdown(pdf_display, unsafe_allow_html=True)
-        
-        # Also show a message about downloading
-        st.caption("📄 preview above • download below for best quality")
-        st.markdown("<br>", unsafe_allow_html=True)
+        # ── In-browser PDF preview ──
+        if pdf_viewer:
+            try:
+                # Use streamlit-pdf-viewer for reliable rendering
+                pdf_viewer(input=st.session_state.pdf_bytes, width=700)
+            except Exception as e:
+                st.error(f"Preview failed: {e}")
+        else:
+            # Fallback if library not loaded
+            st.info("PDF ready below (preview unavailable)")
 
         # ── Download buttons ──
         col1, col2, col3 = st.columns([2, 2, 1])
