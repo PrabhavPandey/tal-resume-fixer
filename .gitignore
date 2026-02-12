@@ -7,9 +7,6 @@ assets/
 # Prompts (internal personality files)
 prompts_langfuse/
 
-# Requirements (keep private)
-requirements.txt
-
 # Python
 __pycache__/
 *.py[cod]
