@@ -1,6 +1,15 @@
 # Secrets - NEVER commit
 .streamlit/secrets.toml
 
+# Assets (avatars, images - private)
+assets/
+
+# Prompts (internal personality files)
+prompts_langfuse/
+
+# Requirements (keep private)
+requirements.txt
+
 # Python
 __pycache__/
 *.py[cod]
@@ -35,9 +44,6 @@ env/
 *.swp
 *.swo
 .DS_Store
-
-# Streamlit
-.streamlit/secrets.toml
 
 # Generated files
 *.pdf
