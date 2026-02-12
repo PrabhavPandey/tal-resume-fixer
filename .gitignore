@@ -1,9 +1,6 @@
 # Secrets - NEVER commit
 .streamlit/secrets.toml
 
-# Assets (avatars, images - private)
-assets/
-
 # Prompts (internal personality files)
 prompts_langfuse/
 
