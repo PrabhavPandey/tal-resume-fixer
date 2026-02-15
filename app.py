@@ -277,7 +277,9 @@ class TalAgent:
         JOB DESCRIPTION:
         {jd_text[:5000]}
         
-        Return a JSON object with this EXACT schema:
+        Return a JSON object with this EXACT schema.
+        KEEP TEXT EXTREMELY SHORT AND PUNCHY. Max 10-15 words per string.
+        
         {{
             "company_name": "extracted company name (or 'this company')",
             "role_title": "extracted job title (or 'this role')",
@@ -312,12 +314,52 @@ class TalAgent:
             return {
                 "company_name": "the company",
                 "role_title": "the role",
-                "missing_keywords": ["key skills", "quantifiable metrics"],
+                "missing_keywords": ["key skills", "metrics"],
                 "good_points": [{"point": "Experience listed", "why": "shows history"}],
                 "needs_fixing": [{"issue": "Generic descriptions", "impact": "low engagement"}],
                 "proposed_changes": [{"change": "Quantify impact", "rationale": "prove value"}],
                 "score_before": 50,
                 "score_after": 80
+            }
+
+    def generate_cold_dms(self, resume_text: str, jd_text: str) -> dict:
+        """Generate 3 high-impact cold DMs."""
+        prompt = f"""
+        You are a fearless career strategist.
+        
+        Based on this candidate's resume and the JD, write 3 cold DM messages to the hiring manager.
+        
+        RESUME SUMMARY: {resume_text[:3000]}
+        JD SUMMARY: {jd_text[:3000]}
+        
+        OUTPUT 3 OPTIONS (JSON):
+        1. "pain_killer": Identify a specific problem in the JD and say how I solve it. (Max 50 words)
+        2. "insider": Mention a recent trend/news in their industry and connect it to me. (Max 50 words)
+        3. "bold": Short, direct, confident ask. (Max 40 words)
+        
+        Return JSON:
+        {{
+            "pain_killer": "message text",
+            "insider": "message text",
+            "bold": "message text"
+        }}
+        """
+        
+        try:
+            response = self.client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.7,
+                )
+            )
+            return json.loads(response.text)
+        except Exception:
+            return {
+                "pain_killer": "Hi [Name], saw you're hiring. My background in [Skill] solves [Problem]. Let's chat?",
+                "insider": "Hi [Name], love what [Company] is doing with [Trend]. I can help scale that.",
+                "bold": "Hi [Name], I'm the [Role] you're looking for. Here's why: [Link]. Open to a 5-min chat?"
             }
 
     def generate_latex_content(self, resume_text: str, jd_text: str, analysis: dict, max_pages: int = 1) -> str:
@@ -437,30 +479,24 @@ def format_analysis_display(analysis: dict) -> str:
     # Missing Keywords
     missing = analysis.get("missing_keywords", [])
     if missing:
-        lines.append(f"**missing keywords:** {', '.join(missing).lower()}\n\n")
+        lines.append(f"**missing keywords:** {', '.join(missing[:5]).lower()}\n\n")
     
-    # Good Points
+    # Good Points (Max 1)
     lines.append("**what's working:**")
-    for item in analysis.get("good_points", [])[:3]:
+    for item in analysis.get("good_points", [])[:1]:
         lines.append(f"- {item.get('point', '').lower()}")
-        if item.get('why'):
-            lines.append(f"  *({item.get('why', '').lower()})*")
     lines.append("") # Spacer
     
-    # Fixes
+    # Fixes (Max 1)
     lines.append("**what needs fixing:**")
-    for item in analysis.get("needs_fixing", [])[:3]:
+    for item in analysis.get("needs_fixing", [])[:1]:
         lines.append(f"- {item.get('issue', '').lower()}")
-        if item.get('impact'):
-            lines.append(f"  *(impact: {item.get('impact', '').lower()})*")
     lines.append("") # Spacer
     
-    # Changes
+    # Changes (Max 2)
     lines.append("**what i'm gonna change:**")
-    for item in analysis.get("proposed_changes", [])[:4]:
+    for item in analysis.get("proposed_changes", [])[:2]:
         lines.append(f"- {item.get('change', '').lower()}")
-        if item.get('rationale'):
-            lines.append(f"  *(why: {item.get('rationale', '').lower()})*")
     lines.append("") # Spacer
     
     # Score Jump - Green Block
@@ -492,6 +528,7 @@ def main():
         st.session_state.resume_text = ""
         st.session_state.resume_pages = 1
         st.session_state.jd_text = ""
+        st.session_state.cold_dms = None
         
         # Opening Line
         st.session_state.messages.append({
@@ -568,7 +605,12 @@ def main():
             )
             st.session_state.latex_content = latex
             
-            # 3. Compile
+            # 3. Generate Cold DMs (New)
+            st.write("drafting cold DMs...")
+            dms = agent.generate_cold_dms(st.session_state.resume_text, st.session_state.jd_text)
+            st.session_state.cold_dms = dms
+            
+            # 4. Compile
             st.write("compiling pdf...")
             pdf_bytes, error = agent.compile_pdf(latex)
             st.session_state.pdf_bytes = pdf_bytes
@@ -621,6 +663,20 @@ def main():
                 mime="text/plain",
                 use_container_width=True
             )
+            
+        # Cold DMs Section
+        if st.session_state.cold_dms:
+            st.markdown("### 📨 Cold DMs (Get Hired)")
+            dms = st.session_state.cold_dms
+            
+            with st.expander("Option 1: The Pain Killer (Problem Solver)", expanded=True):
+                st.code(dms.get("pain_killer", ""), language="text")
+                
+            with st.expander("Option 2: The Insider (Company/Industry Context)"):
+                st.code(dms.get("insider", ""), language="text")
+                
+            with st.expander("Option 3: The Bold (Direct Ask)"):
+                st.code(dms.get("bold", ""), language="text")
             
         if st.button("🔄 Start Over"):
             st.session_state.clear()
