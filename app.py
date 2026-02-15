@@ -230,9 +230,9 @@ class TalAgent:
             st.error("Missing GEMINI_API_KEY in secrets.toml")
             st.stop()
 
-    def chat(self, user_msg: str, context: str = "") -> str:
+    def chat(self, user_msg: str) -> str:
         """Get a simple chat response from Tal."""
-        prompt = f"{TAL_SYSTEM_PROMPT}\n\nContext: {context}\nUser: {user_msg}\nTal (reply to User, do not repeat Context):"
+        prompt = f"{TAL_SYSTEM_PROMPT}\nUser: {user_msg}\nTal:"
         response = self.client.models.generate_content(
             model=MODEL_NAME,
             contents=prompt,
@@ -254,7 +254,11 @@ class TalAgent:
 
     def extract_links(self, text: str) -> str:
         """Extract links from text to ensure preservation."""
-        links = re.findall(r'(https?://[^\s]+|www\.[^\s]+)', text)
+        # Standard URLs
+        links = re.findall(r'(https?://[^\s]+)', text)
+        # GitHub/LinkedIn shorthand
+        links += re.findall(r'(?:github\.com/[^\s]+)', text)
+        links += re.findall(r'(?:linkedin\.com/in/[^\s]+)', text)
         return "\n".join(set(links))
 
     def analyze_resume(self, resume_text: str, jd_text: str) -> dict:
@@ -521,7 +525,7 @@ def main():
                     st.session_state.messages.append({"role": "user", "content": f"Uploaded {uploaded.name} ({pages} pages)"})
                     
                     # Tal response
-                    ack = agent.chat("I just uploaded my resume.", context=f"Resume length: {len(text)} chars. Pages: {pages}")
+                    ack = agent.chat("I just uploaded my resume.")
                     st.session_state.messages.append({"role": "assistant", "content": f"{ack}\n\npaste the jd now."})
                     
                     st.session_state.step = "jd"
