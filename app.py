@@ -431,8 +431,8 @@ class TalAgent:
            - ONLY use these VERIFIED LINKS:
            {links_str}
            - Format: \\href{{URL}}{{\\textbf{{Display Text}}}}
-           - DISPLAY TEXT: USE THE ORIGINAL NAME found in the resume (e.g. "Website", "Demo"). DO NOT rename to "Live App".
-           - **CRITICAL**: If a project in the input has multiple links (e.g. Video | Website | GitHub), YOU MUST INCLUDE ALL OF THEM. Do not drop "GitHub".
+           - DISPLAY TEXT: USE THE ORIGINAL NAME found in the resume. DO NOT rename.
+           - **CRITICAL**: If a project in the input has multiple links , YOU MUST INCLUDE ALL OF THEM. Do not drop "GitHub".
         
         TASK: Rewrite this resume for the {role} role at {company}.
         
