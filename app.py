@@ -291,12 +291,12 @@ class TalAgent:
         You are Tal, a brutal but helpful career mentor.
         
         TASK 1: RESEARCH
-        - Use Google Search to find the specific "Tech Stack" and "Culture" of the company in the JD.
-        - Find what skills they value MOST right now.
+        - Use Google Search to find the specific "Tech Stack", "Culture", and "Stage" (Startup vs Corporate) of the company.
+        - Find what skills/outcomes they value MOST right now.
         
-        TASK 2: ANALYZE
-        - Identify "RED FLAGS" (mismatches).
-        - Identify "IRRELEVANT SKILLS": Tools/skills in the resume that are NOT required for this specific role and waste space (e.g. "Alteryx" for a React Dev, or "Excel" for a Senior AI Engineer).
+        TASK 2: STRATEGY
+        - Define a "Role Translation Strategy": How to frame the candidate's *actual* experience to fit this role? (e.g. "Highlight the *business impact* of RAG agents, not just the code").
+        - Identify "Irrelevant Skills" to cut.
         
         RESUME:
         {resume_text[:10000]}
@@ -310,13 +310,15 @@ class TalAgent:
         {{
             "company_name": "extracted company name (or 'this company')",
             "role_title": "extracted job title (or 'this role')",
+            "company_stage": "Startup / Scaleup / Corporate",
+            "role_translation_strategy": "One specific instruction on how to frame their experience",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
             "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
                 {{"point": "strength description", "why": "why it matters"}}
             ],
             "needs_fixing": [
-                {{"issue": "BIGGEST RED FLAG OR MISALIGNMENT (e.g. 'Only 2y experience vs 5y required' or 'Profile is Dev, Role is Sales')", "impact": "Why this is a dealbreaker"}}
+                {{"issue": "BIGGEST RED FLAG OR MISALIGNMENT", "impact": "Why this is a dealbreaker"}}
             ],
             "proposed_changes": [
                 {{"change": "what you will change", "rationale": "why this helps"}}
@@ -359,27 +361,33 @@ class TalAgent:
         
         # Extract best points from analysis if available
         highlights = ""
+        strongest_point = "my background"
         if analysis:
             good_points = [p.get('point', '') for p in analysis.get('good_points', [])]
-            highlights = f"\nCANDIDATE STRENGTHS (PICK THE BEST ONE): {', '.join(good_points)}"
+            if good_points:
+                strongest_point = good_points[0]
+            highlights = f"\nCANDIDATE STRENGTHS: {', '.join(good_points)}"
         
         prompt = f"""
         You are an elite career strategist.
         
         TASK: Write ONE high-impact Cold DM to a Hiring Manager or Founder at {company_name}.
         
+        RESEARCH INSTRUCTIONS (USE GOOGLE SEARCH):
+        1. Search for "{company_name} strategy 2026", "{company_name} recent news", "{company_name} blog".
+        2. Search for "{company_name} founders" or "Hiring Manager for [Role]".
+        3. Find a SPECIFIC insight: A recent product launch, a strategic pivot, a funding round, or a founder's quote.
+        
+        DRAFTING INSTRUCTIONS:
+        - **HOOK**: Start with the specific insight you found. Show you did homework. (e.g. "Just read your post on X...", "Saw the Series B announcement...").
+        - **BRIDGE**: Connect that insight to the candidate's STRONGEST point: "{strongest_point}".
+        - **ASK**: "Open to a 10-min chat?"
+        
         CRITICAL CONSTRAINTS:
         - MAX 50 WORDS.
-        - NO fluff. NO filler phrases.
-        - DIRECT & PUNCHY.
-        
-        STRUCTURE:
-        1. [The Hook] A specific, deep insight about {company_name}, the founder, or their industry. (e.g. "Saw your recent pivot to X...", "Agreed with your take on Y...").
-        2. [The Bridge] "This aligns with my work at [Company]..."
-        3. [The USP] The SINGLE most impressive achievement from the candidate's profile that proves they can solve the company's problem. (e.g. "Scaled to 1M users", "Built the core infra", "Exited a startup").
-        4. [The Ask] "Open to a 10-min chat?"
-        
-        TONE: {tone}.
+        - NO fluff ("I hope you are well", "I'm a big fan").
+        - NO generic praise.
+        - TONE: {tone}.
         
         RESUME SUMMARY:
         {resume_text[:2000]}
@@ -389,7 +397,7 @@ class TalAgent:
         {highlights}
         
         OUTPUT:
-        Return ONLY the message text. Use line breaks between sections.
+        Return ONLY the message text.
         """
         
         try:
@@ -412,46 +420,35 @@ class TalAgent:
         
         company = analysis.get("company_name", "the company")
         role = analysis.get("role_title", "the role")
+        strategy = analysis.get("role_translation_strategy", "Focus on relevant impact.")
         irrelevant_skills = analysis.get("irrelevant_skills", [])
         
-        links_str = "\n".join(links)
+        # Verify links are strings to be safe
+        clean_links = [str(l) for l in links if isinstance(l, str)]
+        links_str = "\n".join(clean_links)
         
         prompt = f"""
         You are an expert Resume Writer using LaTeX.
         
-        🚨 CRITICAL RULES (VIOLATION = FAILURE) 🚨
-        1. STRICT PAGE LIMIT: {max_pages} PAGE(S). NO EXCEPTIONS.
-           - YOU HAVE A STRICT CONTENT BUDGET. If content spills over:
-             - CUT older/irrelevant work experience (keep only Title + Company + 1 bullet).
-             - MERGE projects.
-             - REDUCE bullet points (Max 3 per recent role, 1-2 for older).
-           - DO NOT CUT EDUCATION DETAILS (Degree, College, GPA/Grades are MANDATORY).
-           - Keep spacing tight.
-        2. SKILL FILTERING:
-           - EXCLUDE these irrelevant skills: {irrelevant_skills}
-           - Do not list them in the Technical Skills section.
-        3. LINK CORRECTNESS:
+        🚨 STRATEGY & AUTHENTICITY 🚨
+        1. **EXECUTE THIS STRATEGY**: "{strategy}"
+        2. **BE AUTHENTIC**: Do NOT invent titles or experience. Do NOT rename "Technical Support" to "Engineer" if false. Instead, highlight the *transferable impact* (e.g. "Automated tickets" vs "Resolved tickets").
+        3. **NO FLUFF**: Do not use "marketing speak" or buzzwords that don't match the actual work.
+        
+        🚨 FORMATTING RULES (VIOLATION = FAILURE) 🚨
+        1. **STRICT PAGE LIMIT**: {max_pages} PAGE(S).
+           - CUT older/irrelevant work experience (keep only Title + Company + 1 bullet).
+           - MERGE projects.
+           - REDUCE bullet points (Max 3 per recent role, 1-2 for older).
+        2. **SKILL FILTERING**:
+           - REMOVE these irrelevant skills: {irrelevant_skills}
+        3. **LINKS**:
            - ONLY use these VERIFIED LINKS:
            {links_str}
-           - DO NOT invent links.
            - Format: \\href{{URL}}{{Display Text}}
-           - DISPLAY TEXT MUST BE SHORT (e.g., "Project", "Demo", "Code").
-           - DO NOT ESCAPE special characters inside the URL part.
+           - DISPLAY TEXT MUST BE SHORT (e.g. "Project", "Code").
         
         TASK: Rewrite this resume for the {role} role at {company}.
-        
-        CONSTRAINTS:
-        1. Output ONLY valid LaTeX code starting with \\documentclass.
-        2. Use Jake's Resume Template structure (provided below).
-        3. Use \\textbf{{}} to bold KEY METRICS (e.g., \\textbf{{20% growth}}).
-        4. Use action verbs and include JD keywords naturally.
-        5. Escape LaTeX special chars (%, $, &, #, _) ONLY in the display text, NOT in URLs.
-        
-        VERIFIED LINKS (ONLY USE THESE):
-        {links_str}
-        
-        TEMPLATE TO USE:
-        {LATEX_TEMPLATE}
         
         RESUME CONTENT:
         {resume_text}
@@ -459,7 +456,13 @@ class TalAgent:
         TARGET JD:
         {jd_text}
         
-        Generate the complete LaTeX document now.
+        LATEX TEMPLATE START:
+        {LATEX_TEMPLATE}
+        
+        OUTPUT:
+        Return ONLY the raw LaTeX code (starting with \\documentclass).
+        - Use \\usepackage[hidelinks]{{hyperref}} as the LAST package.
+        - Ensure all hyperlinks are functional.
         """
         
         response = self.client.models.generate_content(
@@ -560,7 +563,7 @@ def format_analysis_display(analysis: dict) -> str:
     lines.append("") # Spacer
     
     # Changes (Max 2)
-    lines.append("**what i'm gonna change:**")
+    lines.append("**the strategy:**")
     for item in analysis.get("proposed_changes", [])[:2]:
         lines.append(f"- {item.get('change', '').lower()}")
     lines.append("") # Spacer
@@ -661,52 +664,56 @@ def main():
     elif st.session_state.step == "jd":
         with st.form("jd_form"):
             jd = st.text_area("paste job description", height=200, placeholder="paste the full JD here...")
-            submitted = st.form_submit_button("fix my resume →")
+            submitted = st.form_submit_button("analyze match →")
             
             if submitted and len(jd) > 50:
                 st.session_state.jd_text = jd
                 st.session_state.messages.append({"role": "user", "content": "Here is the JD."})
-                st.session_state.messages.append({"role": "assistant", "content": "bet. analyzing now..."})
-                st.session_state.step = "processing"
+                st.session_state.step = "analysis"
                 st.rerun()
 
-    # ─── STEP 3: PROCESSING ───
-    elif st.session_state.step == "processing":
-        with st.status("🦊 tal is working...", expanded=True) as status:
+    # ─── STEP 3: ANALYSIS & STRATEGY ───
+    elif st.session_state.step == "analysis":
+        # Run Analysis (Once)
+        if "analysis_results" not in st.session_state:
+            with st.status("🦊 tal is analyzing...", expanded=True) as status:
+                st.write("checking the vibe...")
+                analysis = agent.analyze_resume(st.session_state.resume_text, st.session_state.jd_text)
+                st.session_state.analysis_results = analysis
+                st.session_state.company_name = analysis.get("company_name", "the company")
+                status.update(label="analysis done!", state="complete")
             
-            # 1. Analyze
-            st.write("analyzing match...")
-            analysis = agent.analyze_resume(st.session_state.resume_text, st.session_state.jd_text)
-            st.session_state.company_name = analysis.get("company_name", "the company")
-            st.session_state.analysis_results = analysis
-            
-            # Show analysis
+            # Show Strategy Message
             analysis_msg = format_analysis_display(analysis)
             st.session_state.messages.append({"role": "assistant", "content": analysis_msg})
+            st.session_state.messages.append({"role": "assistant", "content": "you cool with this plan?"})
+            st.rerun()
+
+        # Approval Button
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            if st.button("🔥 Yes, Cook", type="primary"):
+                st.session_state.messages.append({"role": "user", "content": "Yes, cook."})
+                st.session_state.messages.append({"role": "assistant", "content": "bet. rewriting now..."})
+                st.session_state.step = "generating"
+                st.rerun()
+
+    # ─── STEP 4: GENERATING RESUME ───
+    elif st.session_state.step == "generating":
+        with st.status("🦊 cooking...", expanded=True) as status:
             
-            # 2. Generate LaTeX
-            st.write("rewriting content...")
+            # 1. Generate LaTeX
+            st.write("applying strategy...")
             latex = agent.generate_latex_content(
                 st.session_state.resume_text, 
                 st.session_state.jd_text, 
-                analysis,
+                st.session_state.analysis_results,
                 links=st.session_state.resume_links,
                 max_pages=st.session_state.resume_pages
             )
             st.session_state.latex_content = latex
             
-            # 3. Generate Cold DM (Deep Research)
-            st.write("researching company & drafting DM...")
-            dm = agent.generate_cold_dm(
-                st.session_state.resume_text, 
-                st.session_state.jd_text, 
-                st.session_state.company_name,
-                tone=st.session_state.dm_tone,
-                analysis=st.session_state.analysis_results
-            )
-            st.session_state.cold_dm = dm
-            
-            # 4. Compile
+            # 2. Compile
             st.write("compiling pdf...")
             pdf_bytes, error = agent.compile_pdf(latex)
             st.session_state.pdf_bytes = pdf_bytes
@@ -760,9 +767,25 @@ def main():
                 use_container_width=True
             )
             
-        # Cold DM Section
-        if st.session_state.cold_dm:
-            st.divider()
+        # Cold DM Section (Add-on)
+        st.divider()
+        
+        if not st.session_state.cold_dm:
+            st.markdown("### 📨 Want to get hired faster?")
+            st.write("Tal can research the company and draft a high-impact Cold DM to the founder.")
+            if st.button("✨ Draft Cold DM (Deep Research)"):
+                with st.spinner("researching company strategy & drafting..."):
+                    dm = agent.generate_cold_dm(
+                        st.session_state.resume_text, 
+                        st.session_state.jd_text, 
+                        st.session_state.company_name,
+                        tone=st.session_state.dm_tone,
+                        analysis=st.session_state.get('analysis_results')
+                    )
+                    st.session_state.cold_dm = dm
+                    st.rerun()
+        
+        else:
             st.markdown(f"### 📨 The Cold DM ({st.session_state.dm_tone})")
             st.info("💡 Pro Tip: Tal researched the company to write this. Send it to the Founder/HM directly.")
             st.code(st.session_state.cold_dm, language="text")
