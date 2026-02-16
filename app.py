@@ -311,7 +311,7 @@ class TalAgent:
             "company_name": "extracted company name (or 'this company')",
             "role_title": "extracted job title (or 'this role')",
             "company_stage": "Startup / Scaleup / Corporate",
-            "role_translation_strategy": "One specific instruction on how to frame their experience",
+            "role_translation_strategy": "Directly address user: 'Look, I'm gonna frame your X experience as Y...'",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
             "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
