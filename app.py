@@ -12,9 +12,6 @@ import base64
 import os
 import json
 import re
-import time
-from typing import Optional, List, Dict, Tuple
-from pydantic import BaseModel
 
 try:
     from streamlit_pdf_viewer import pdf_viewer
@@ -79,12 +76,6 @@ st.markdown("""
         border-radius: 8px;
         font-weight: 600;
         padding: 0.5rem 1rem;
-    }
-    
-    /* Analysis bullets */
-    .analysis-point {
-        margin-bottom: 0.8rem;
-        display: block;
     }
     
     /* Hide branding */
@@ -274,7 +265,6 @@ class TalAgent:
         - Define a "Role Translation Strategy": How to frame the candidate's *actual* experience to fit this role?
         - Explain this STRATEGY directly to the user (e.g. "Look, I need to rebrand your Support role as Customer Success...").
         - Identify "Irrelevant Skills" to cut.
-        - **MATCH CHECK**: If the candidate is totally unqualified (e.g. 2y experience for VP role, or Dev applying for Legal), flag it.
         
         RESUME:
         {resume_text[:10000]}
@@ -290,9 +280,6 @@ class TalAgent:
             "role_title": "extracted job title (or 'this role')",
             "company_stage": "Startup / Scaleup / Corporate",
             "role_translation_strategy": "Direct explanation of the rebrand strategy to the user (max 20 words)",
-            "is_low_match": true/false,
-            "low_match_reason": "Specific reason if low match (e.g. 'Role needs 8y exp, you have 2y')",
-            "constructive_feedback": "Constructive advice: 'Your [Strength] is great. Highlight [Specific Skill] to bridge the gap.'",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
             "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
@@ -418,12 +405,12 @@ class TalAgent:
         4. **BOLD METRICS**: BOLD specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{Python}}).
         
         🚨 FORMATTING RULES (VIOLATION = FAILURE) 🚨
-        1. **DRACONIAN 1-PAGE LIMIT**: The output MUST fit on {max_pages} page(s).
-           - **ABSOLUTE MAX**: 3 Work Experience entries total.
-           - **ABSOLUTE MAX**: 3 Bullet points per role.
-           - **ABSOLUTE MAX**: 2 Projects total (CUT THE REST).
-           - IF YOU HAVE MORE CONTENT: MERGE older roles into one-liners (Company, Title, Dates) or CUT them.
-           - DO NOT shrink fonts to cheat. CUT CONTENT.
+        1. **HARD 1-PAGE LIMIT**: The final PDF MUST be exactly 1 page.
+           - **MAX**: 2 Work Experience entries total.
+           - **MAX**: 2 bullet points per role.
+           - **MAX**: 2 Projects total, 2 bullets each.
+           - If content still spills, CUT the oldest work experience first, then the oldest project.
+           - DO NOT shrink fonts or margins to cheat. CUT CONTENT.
            - **DO NOT CUT EDUCATION**: Keep ALL education entries (University AND High School).
         2. **SKILL FILTERING**:
            - REMOVE these irrelevant skills: {irrelevant_skills}
@@ -432,7 +419,7 @@ class TalAgent:
            {links_str}
            - Format: \\href{{URL}}{{\\textbf{{Display Text}}}}
            - DISPLAY TEXT: USE THE ORIGINAL NAME found in the resume. DO NOT rename.
-           - **CRITICAL**: If a project in the input has multiple links , YOU MUST INCLUDE ALL OF THEM. Do not drop "GitHub".
+           - **CRITICAL**: If a project in the input has multiple links (e.g. Video | Website | GitHub), YOU MUST INCLUDE ALL OF THEM. Do not drop any.
         
         TASK: Rewrite this resume for the {role} role at {company}.
         
@@ -447,21 +434,27 @@ class TalAgent:
         
         OUTPUT:
         Return ONLY the raw LaTeX code (starting with \\documentclass).
-        - Use \\usepackage[hidelinks]{{hyperref}} as the LAST package.
+        - The hyperref package and link colors are ALREADY configured in the template above. Do NOT add another \\usepackage{{hyperref}} or change link colors.
         - Ensure all hyperlinks are functional.
         """
         
-        response = self.client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                # Not using JSON mode here, we want raw text (LaTeX)
+        try:
+            response = self.client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.2,
+                )
             )
-        )
+            latex = response.text or ""
+        except Exception as e:
+            st.error(f"Resume generation failed: {e}")
+            # Fallback: return a minimal LaTeX document with an error note
+            latex = LATEX_TEMPLATE.replace("FULL_NAME", "Tal Resume (Generation Error)").replace(
+                "EDUCATION_CONTENT", "Unfortunately, something went wrong while generating your resume."
+            ).replace("EXPERIENCE_CONTENT", "").replace("PROJECTS_CONTENT", "").replace("SKILLS_CONTENT", "")
         
-        # Clean up code fences
-        latex = response.text
+        # Clean up possible markdown fences
         latex = re.sub(r"^```(?:latex|tex)?\s*\n", "", latex, flags=re.MULTILINE)
         latex = re.sub(r"\n```\s*$", "", latex, flags=re.MULTILINE)
         return latex.strip()
@@ -529,26 +522,6 @@ def format_analysis_display(analysis: dict) -> str:
         role_str = f"{role} role"
         
     lines = []
-    
-    # ⚠️ LOW MATCH ALERT
-    if analysis.get('is_low_match') or analysis.get('score_before', 50) < 35:
-        reason = analysis.get('low_match_reason', 'mismatched experience or skills').lower()
-        feedback = analysis.get('constructive_feedback', 'focus on transferable skills').lower()
-        
-        alert_html = f"""
-        <div style="background-color: rgba(69, 10, 10, 0.3); border: 1px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-            <p style="margin: 0; color: #fca5a5; font-weight: bold; font-size: 1.1em;">
-                ⚠️ low match alert : (
-            </p>
-            <p style="margin: 8px 0 0 0; font-size: 0.95em; color: #fecaca;">
-                this role is way off given your profile - <b>{reason}</b>.
-                <br><br>
-                💡 {feedback}
-            </p>
-        </div>
-        """
-        lines.append(alert_html)
-    
     lines.append(f"alright i've analyzed your resume for the **{role_str}** at **{company}**\n\n")
     
     # Missing Keywords
@@ -603,7 +576,8 @@ def main():
     # Session State Init
     if "messages" not in st.session_state:
         st.session_state.messages = []
-        st.session_state.step = "upload" # upload -> jd -> processing -> done
+        # Flow: upload -> analysis -> generating -> done
+        st.session_state.step = "upload"
         st.session_state.resume_text = ""
         st.session_state.resume_pages = 1
         st.session_state.resume_links = []
@@ -675,7 +649,7 @@ def main():
 
     # ─── STEP 3: ANALYSIS & STRATEGY ───
     elif st.session_state.step == "analysis":
-        # Run Analysis (Once)
+        # Run Analysis once, then immediately generate the resume
         if "analysis_results" not in st.session_state:
             with st.status("🦊 tal is analyzing...", expanded=True) as status:
                 st.write("checking the vibe...")
@@ -684,33 +658,14 @@ def main():
                 st.session_state.company_name = analysis.get("company_name", "the company")
                 status.update(label="analysis done!", state="complete")
             
-            # Show Strategy Message
+            # Show Strategy Message in chat
             analysis_msg = format_analysis_display(analysis)
             st.session_state.messages.append({"role": "assistant", "content": analysis_msg})
+            st.session_state.messages.append({"role": "assistant", "content": "cool, let me cook this into a resume."})
             
-            # Auto-Cook Check
-            is_low = analysis.get('is_low_match') or analysis.get('score_before', 50) < 35
-            
-            if is_low:
-                st.session_state.messages.append({"role": "assistant", "content": "i need your go-ahead on this."})
-            else:
-                st.session_state.messages.append({"role": "assistant", "content": "strategy is solid. cooking now..."})
-                st.session_state.step = "generating"
-                
+            # Move straight to resume generation
+            st.session_state.step = "generating"
             st.rerun()
-
-        # Approval Button (Only shown if stuck in analysis step due to low match)
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            btn_label = "🔥 Yes, Cook"
-            if st.session_state.analysis_results.get('is_low_match'):
-                btn_label = "⚠️ Proceed Anyway"
-                
-            if st.button(btn_label, type="primary"):
-                st.session_state.messages.append({"role": "user", "content": "Yes, cook."})
-                st.session_state.messages.append({"role": "assistant", "content": "bet. rewriting now..."})
-                st.session_state.step = "generating"
-                st.rerun()
 
     # ─── STEP 4: GENERATING RESUME ───
     elif st.session_state.step == "generating":
