@@ -108,7 +108,7 @@ LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 \usepackage{multicol}
 \setlength{\multicolsep}{-3.0pt}
 \setlength{\columnsep}{-1pt}
-\usepackage[colorlinks=true, urlcolor=RoyalBlue, linkcolor=RoyalBlue]{hyperref}
+\usepackage[colorlinks=true, urlcolor=royalblue, linkcolor=royalblue]{hyperref}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -255,38 +255,38 @@ class TalAgent:
         Returns structured JSON.
         """
         prompt = f"""
-        You are Tal, a brutal but helpful career mentor.
+        you are tal, a brutal but helpful career mentor.
         
-        TASK 1: RESEARCH
-        - Use Google Search to find the specific "Tech Stack", "Culture", and "Stage" (Startup vs Corporate) of the company.
-        - Find what skills/outcomes they value MOST right now.
+        task 1: research
+        - use google search to find the specific "tech stack", "culture", and "stage" (startup vs corporate) of the company.
+        - find what skills/outcomes they value most right now.
         
-        TASK 2: STRATEGY
-        - Define a "Role Translation Strategy": How to frame the candidate's *actual* experience to fit this role?
-        - Explain this STRATEGY directly to the user (e.g. "Look, I need to rebrand your Support role as Customer Success...").
-        - Identify "Irrelevant Skills" to cut.
+        task 2: strategy
+        - define a "role translation strategy": how to frame the candidate's *actual* experience to fit this role?
+        - explain this strategy directly to the user (e.g. "look, i need to rebrand your support role as customer success...").
+        - identify "irrelevant skills" to cut.
         
-        RESUME:
+        resume:
         {resume_text[:10000]}
         
-        JOB DESCRIPTION:
+        job description:
         {jd_text[:5000]}
         
-        Return a JSON object with this EXACT schema.
-        KEEP TEXT EXTREMELY SHORT AND PUNCHY. Max 10-15 words per string.
+        return a json object with this exact schema.
+        keep text extremely short and punchy. max 10-15 words per string.
         
         {{
             "company_name": "extracted company name (or 'this company')",
             "role_title": "extracted job title (or 'this role')",
-            "company_stage": "Startup / Scaleup / Corporate",
-            "role_translation_strategy": "Direct explanation of the rebrand strategy to the user (max 20 words)",
+            "company_stage": "startup / scaleup / corporate",
+            "role_translation_strategy": "direct explanation of the rebrand strategy to the user (max 20 words)",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
             "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
                 {{"point": "strength description", "why": "why it matters"}}
             ],
             "needs_fixing": [
-                {{"issue": "BIGGEST RED FLAG OR MISALIGNMENT", "impact": "Why this is a dealbreaker"}}
+                {{"issue": "biggest red flag or misalignment", "impact": "why this is a dealbreaker"}}
             ],
             "proposed_changes": [
                 {{"change": "what you will change", "rationale": "why this helps"}}
@@ -295,7 +295,7 @@ class TalAgent:
             "score_after": 85
         }}
         
-        IMPORTANT: In 'needs_fixing', PUT THE SINGLE BIGGEST RED FLAG FIRST. Be direct.
+        important: in 'needs_fixing', put the single biggest red flag first. be direct.
         """
         
         try:
@@ -315,17 +315,19 @@ class TalAgent:
             return {
                 "company_name": "the company",
                 "role_title": "the role",
+                "company_stage": "corporate",
+                "role_translation_strategy": "look, i'll frame your general skills for this generic role",
                 "missing_keywords": ["key skills", "metrics"],
                 "irrelevant_skills": [],
-                "good_points": [{"point": "Experience listed", "why": "shows history"}],
-                "needs_fixing": [{"issue": "Generic descriptions", "impact": "low engagement"}],
-                "proposed_changes": [{"change": "Quantify impact", "rationale": "prove value"}],
+                "good_points": [{"point": "experience listed", "why": "shows history"}],
+                "needs_fixing": [{"issue": "generic descriptions", "impact": "low engagement"}],
+                "proposed_changes": [{"change": "quantify impact", "rationale": "prove value"}],
                 "score_before": 50,
                 "score_after": 80
             }
 
-    def generate_cold_dm(self, resume_text: str, jd_text: str, company_name: str, tone: str = "professional but bold", analysis: dict = None) -> str:
-        """Generate a single, deeply researched Cold DM using Google Search."""
+    def generate_cold_dm(self, resume_text: str, jd_text: str, company_name: str, analysis: dict = None) -> str:
+        """Generate a single, deeply researched cold dm using google search."""
         
         # Extract best points from analysis if available
         highlights = ""
@@ -333,39 +335,39 @@ class TalAgent:
         if analysis:
             good_points = [p.get('point', '') for p in analysis.get('good_points', [])]
             if good_points:
-                strongest_point = good_points[0]
-            highlights = f"\nCANDIDATE STRENGTHS: {', '.join(good_points)}"
+                strongest_point = good_points[0].lower()
+            highlights = f"\ncandidate strengths: {', '.join([p.lower() for p in good_points])}"
         
         prompt = f"""
-        You are an elite career strategist.
+        you are an elite career strategist.
         
-        TASK: Write ONE high-impact Cold DM to a Hiring Manager or Founder at {company_name}.
+        task: write one high-impact cold dm to a hiring manager or founder at {company_name}.
         
-        RESEARCH INSTRUCTIONS (USE GOOGLE SEARCH):
-        1. Search for "{company_name} strategy 2026", "{company_name} recent news", "{company_name} blog".
-        2. Search for "{company_name} founders" or "Hiring Manager for [Role]".
-        3. Find a SPECIFIC insight: A recent product launch, a strategic pivot, a funding round, or a founder's quote.
+        research instructions (use google search):
+        1. search for "{company_name} strategy 2026", "{company_name} recent news", "{company_name} blog".
+        2. search for "{company_name} founders" or "hiring manager for [role]".
+        3. find a specific insight: a recent product launch, a strategic pivot, a funding round, or a founder's quote.
         
-        DRAFTING INSTRUCTIONS:
-        - **HOOK**: Start with the specific insight you found. Show you did homework. (e.g. "Just read your post on X...", "Saw the Series B announcement...").
-        - **BRIDGE**: Connect that insight to the candidate's STRONGEST point: "{strongest_point}".
-        - **ASK**: "Open to a 10-min chat?"
+        drafting instructions:
+        - hook: start with the specific insight you found. show you did homework. (e.g. "just read your post on x...", "saw the series b announcement...").
+        - bridge: connect that insight to the candidate's strongest point: "{strongest_point}".
+        - ask: "open to a 10-min chat?"
         
-        CRITICAL CONSTRAINTS:
-        - MAX 50 WORDS.
-        - NO fluff ("I hope you are well", "I'm a big fan").
-        - NO generic praise.
-        - TONE: {tone}.
+        critical constraints:
+        - max 50 words.
+        - no fluff ("i hope you are well", "i'm a big fan").
+        - no generic praise.
+        - tone: witty and direct.
         
-        RESUME SUMMARY:
+        resume summary:
         {resume_text[:2000]}
         
-        JOB DESCRIPTION SUMMARY:
+        job description summary:
         {jd_text[:2000]}
         {highlights}
         
-        OUTPUT:
-        Return ONLY the message text.
+        output:
+        return only the message text.
         """
         
         try:
@@ -381,61 +383,61 @@ class TalAgent:
             return response.text.strip()
         except Exception as e:
             # Fallback if search unavailable
-            return f"Hi [Name], I've been following {company_name} and noticed your work on [Specific Project from JD]. My background matches this perfectly. Let's chat? (Search unavailable: {e})"
+            return f"hi [name], i've been following {company_name} and noticed your work on [specific project from jd]. my background matches this perfectly. let's chat? (search unavailable: {e})"
 
     def generate_latex_content(self, resume_text: str, jd_text: str, analysis: dict, links: list, max_pages: int = 1) -> str:
         """Generate the full LaTeX code for the resume."""
         
-        company = analysis.get("company_name", "the company")
-        role = analysis.get("role_title", "the role")
-        strategy = analysis.get("role_translation_strategy", "Focus on relevant impact.")
-        irrelevant_skills = analysis.get("irrelevant_skills", [])
+        company = analysis.get("company_name", "the company").lower()
+        role = analysis.get("role_title", "the role").lower()
+        strategy = analysis.get("role_translation_strategy", "focus on relevant impact.").lower()
+        irrelevant_skills = [s.lower() for s in analysis.get("irrelevant_skills", [])]
         
         # Verify links are strings to be safe
         clean_links = [str(l) for l in links if isinstance(l, str)]
         links_str = "\n".join(clean_links)
         
         prompt = f"""
-        You are an expert Resume Writer using LaTeX.
+        you are an expert resume writer using latex.
         
-        🚨 STRATEGY & AUTHENTICITY 🚨
-        1. **EXECUTE THIS STRATEGY**: "{strategy}"
-        2. **BE AUTHENTIC**: Do NOT invent titles or experience. Highlight *transferable impact*.
-        3. **PUNCHY IMPACT**: Use strong action verbs. Be concise but impressive.
-        4. **BOLD METRICS**: BOLD specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{Python}}).
+        🚨 strategy & authenticity 🚨
+        1. **execute this strategy**: "{strategy}"
+        2. **be authentic**: do NOT invent titles or experience. highlight *transferable impact*.
+        3. **punchy impact**: use strong action verbs. be concise but impressive.
+        4. **bold metrics**: bold specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{python}}).
         
-        🚨 FORMATTING RULES (VIOLATION = FAILURE) 🚨
-        1. **HARD 1-PAGE LIMIT**: The final PDF MUST be exactly 1 page.
-           - **MAX**: 2 Work Experience entries total.
-           - **MAX**: 2 bullet points per role.
-           - **MAX**: 2 Projects total, 2 bullets each.
-           - If content still spills, CUT the oldest work experience first, then the oldest project.
-           - DO NOT shrink fonts or margins to cheat. CUT CONTENT.
-           - **DO NOT CUT EDUCATION**: Keep ALL education entries (University AND High School).
-        2. **SKILL FILTERING**:
-           - REMOVE these irrelevant skills: {irrelevant_skills}
-        3. **LINKS**:
-           - ONLY use these VERIFIED LINKS:
+        🚨 formatting rules (violation = failure) 🚨
+        1. **hard 1-page limit**: the final pdf must be exactly 1 page.
+           - **max**: 2 work experience entries total.
+           - **max**: 2 bullet points per role.
+           - **max**: 2 projects total, 2 bullets each.
+           - if content still spills, cut the oldest work experience first, then the oldest project.
+           - do NOT shrink fonts or margins to cheat. cut content.
+           - **do NOT cut education**: keep all education entries (university and high school).
+        2. **skill filtering**:
+           - remove these irrelevant skills: {irrelevant_skills}
+        3. **links**:
+           - only use these verified links:
            {links_str}
-           - Format: \\href{{URL}}{{\\textbf{{Display Text}}}}
-           - DISPLAY TEXT: USE THE ORIGINAL NAME found in the resume. DO NOT rename.
-           - **CRITICAL**: If a project in the input has multiple links (e.g. Video | Website | GitHub), YOU MUST INCLUDE ALL OF THEM. Do not drop any.
+           - format: \\href{{URL}}{{\\textbf{{display text}}}}
+           - display text: use the original name found in the resume. do NOT rename.
+           - **critical**: if a project in the input has multiple links (e.g. video | website | github), you must include all of them. do not drop any.
         
-        TASK: Rewrite this resume for the {role} role at {company}.
+        task: rewrite this resume for the {role} role at {company}.
         
-        RESUME CONTENT:
+        resume content:
         {resume_text}
         
-        TARGET JD:
+        target jd:
         {jd_text}
         
-        LATEX TEMPLATE START:
+        latex template start:
         {LATEX_TEMPLATE}
         
-        OUTPUT:
-        Return ONLY the raw LaTeX code (starting with \\documentclass).
-        - The hyperref package and link colors are ALREADY configured in the template above. Do NOT add another \\usepackage{{hyperref}} or change link colors.
-        - Ensure all hyperlinks are functional.
+        output:
+        return only the raw latex code (starting with \\documentclass).
+        - the hyperref package and link colors are already configured in the template above. do not add another \\usepackage{{hyperref}} or change link colors.
+        - ensure all hyperlinks are functional.
         """
         
         try:
@@ -558,14 +560,12 @@ def format_analysis_display(analysis: dict) -> str:
     score_html = f"""
     <div style="background-color: rgba(74, 222, 128, 0.1); border: 1px solid #4ade80; border-radius: 8px; padding: 16px; margin-top: 10px; margin-bottom: 10px;">
         <p style="margin: 0; color: #4ade80; font-weight: bold; font-size: 1.1em; text-align: center;">
-            🚀 Score Jump: {before} → {after}
+            🚀 score jump: {before} → {after}
         </p>
     </div>
     """
     
     lines.append(score_html)
-    # lines.append("\nlet me cook") # Removed, button handles this
-    
     return "\n".join(lines)
 
 # ─────────────────────────────────────────────────────────────
@@ -584,7 +584,6 @@ def main():
         st.session_state.jd_text = ""
         st.session_state.cold_dm = ""
         st.session_state.company_name = ""
-        st.session_state.dm_tone = "Professional & Insightful"
         
         # Opening Line
         st.session_state.messages.append({
@@ -597,8 +596,6 @@ def main():
         st.session_state.cold_dm = ""
     if "company_name" not in st.session_state:
         st.session_state.company_name = ""
-    if "dm_tone" not in st.session_state:
-        st.session_state.dm_tone = "Professional & Insightful"
 
     # Header
     tal_img = img_to_base64(TAL_AVATAR)
@@ -607,8 +604,8 @@ def main():
     else:
         icon_html = "🦊 "
         
-    st.markdown(f'<div class="main-title">{icon_html}tal - resume fixer</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">ats-optimized. recruiter-approved. no fluff.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="main-title">{icon_html}tal - resume fixer</div>', unsafe_allow_html=True)
+        st.markdown('<div class="subtitle">ats-optimized. recruiter-approved. no fluff.</div>', unsafe_allow_html=True)
 
     # Agent Init
     agent = TalAgent()
@@ -620,12 +617,12 @@ def main():
 
     # ─── STEP 1: UPLOAD & JD ───
     if st.session_state.step == "upload":
-        st.markdown("### 1. The Inputs")
+        st.markdown("### 1. the inputs")
         col1, col2 = st.columns([1, 1])
         with col1:
             uploaded = st.file_uploader("upload resume (pdf)", type="pdf")
         with col2:
-            jd = st.text_area("paste job description", height=200, placeholder="paste full JD here...", label_visibility="visible")
+            jd = st.text_area("paste job description", height=200, placeholder="paste full jd here...", label_visibility="visible")
             
         submitted = st.button("analyze match →", type="primary", use_container_width=True)
         
@@ -639,13 +636,13 @@ def main():
                         st.session_state.resume_links = data["links"]
                         st.session_state.jd_text = jd
                         
-                        st.session_state.messages.append({"role": "user", "content": f"Uploaded {uploaded.name} and JD."})
+                        st.session_state.messages.append({"role": "user", "content": f"uploaded {uploaded.name} and jd."})
                         st.session_state.step = "analysis"
                         st.rerun()
                     else:
-                        st.error("Could not read PDF. Is it an image scan?")
+                        st.error("could not read pdf. is it an image scan?")
             else:
-                st.warning("Please upload a resume and paste the JD.")
+                st.warning("please upload a resume and paste the jd.")
 
     # ─── STEP 3: ANALYSIS & STRATEGY ───
     elif st.session_state.step == "analysis":
@@ -701,13 +698,13 @@ def main():
             if pdf_viewer:
                 pdf_viewer(input=st.session_state.pdf_bytes, width=700)
             else:
-                st.info("Preview unavailable (library missing). Download below.")
+                st.info("preview unavailable (library missing). download below.")
                 
             # Buttons
             col1, col2 = st.columns(2)
             with col1:
                 st.download_button(
-                    "📥 Download PDF",
+                    "📥 download pdf",
                     data=st.session_state.pdf_bytes,
                     file_name="Tal_Resume.pdf",
                     mime="application/pdf",
@@ -716,20 +713,20 @@ def main():
                 )
             with col2:
                 st.download_button(
-                    "📄 Download .tex",
+                    "📄 download .tex",
                     data=st.session_state.latex_content,
                     file_name="Tal_Resume.tex",
                     mime="text/plain",
                     use_container_width=True
                 )
         else:
-            st.error("PDF Compilation Failed. But I generated the code!")
+            st.error("pdf compilation failed. but i generated the code!")
             if st.session_state.compile_error:
-                with st.expander("Error Details"):
+                with st.expander("error details"):
                     st.write(st.session_state.compile_error)
             
             st.download_button(
-                "📄 Download .tex source (Use Overleaf)",
+                "📄 download .tex source (use overleaf)",
                 data=st.session_state.latex_content,
                 file_name="Tal_Resume.tex",
                 mime="text/plain",
@@ -740,49 +737,25 @@ def main():
         st.divider()
         
         if not st.session_state.cold_dm:
-            st.markdown("### 📨 Want to get hired faster?")
-            st.write("Tal can research the company and draft a high-impact Cold DM to the founder.")
-            if st.button("✨ Draft Cold DM (Deep Research)"):
+            st.markdown("### 📨 want to get hired faster?")
+            st.write("tal can research the company and draft a high-impact cold dm to the founder.")
+            if st.button("✨ draft cold dm (deep research)"):
                 with st.spinner("researching company strategy & drafting..."):
                     dm = agent.generate_cold_dm(
                         st.session_state.resume_text, 
                         st.session_state.jd_text, 
                         st.session_state.company_name,
-                        tone=st.session_state.dm_tone,
                         analysis=st.session_state.get('analysis_results')
                     )
                     st.session_state.cold_dm = dm
                     st.rerun()
         
         else:
-            st.markdown(f"### 📨 The Cold DM ({st.session_state.dm_tone})")
-            st.info("💡 Pro Tip: Tal researched the company to write this. Send it to the Founder/HM directly.")
+            st.markdown(f"### 📨 the cold dm")
+            st.info("💡 pro tip: tal researched the company to write this. send it to the founder/hm directly.")
             st.code(st.session_state.cold_dm, language="text")
             
-            if st.button("🔄 Regenerate with New Tone"):
-                # Cycle tone
-                tones = ["Direct & Bold", "Casual & Witty", "Professional & Insightful"]
-                current_tone = st.session_state.dm_tone
-                # Find next tone
-                try:
-                    next_idx = (tones.index(current_tone) + 1) % len(tones)
-                except ValueError:
-                    next_idx = 0
-                new_tone = tones[next_idx]
-                st.session_state.dm_tone = new_tone
-                
-                with st.spinner(f"Re-researching & drafting ({new_tone})..."):
-                    new_dm = agent.generate_cold_dm(
-                        st.session_state.resume_text, 
-                        st.session_state.jd_text, 
-                        st.session_state.company_name,
-                        tone=new_tone,
-                        analysis=st.session_state.get('analysis_results')
-                    )
-                    st.session_state.cold_dm = new_dm
-                    st.rerun()
-            
-        if st.button("🔄 Start Over"):
+        if st.button("🔄 start over"):
             st.session_state.clear()
             st.rerun()
 
