@@ -316,6 +316,7 @@ class TalAgent:
             "role_translation_strategy": "Direct explanation of the rebrand strategy to the user (max 20 words)",
             "is_low_match": true/false,
             "low_match_reason": "Specific reason if low match (e.g. 'Role needs 8y exp, you have 2y')",
+            "constructive_feedback": "Constructive advice: 'Your [Strength] is great. Highlight [Specific Skill] to bridge the gap.'",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
             "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
@@ -436,14 +437,16 @@ class TalAgent:
         
         🚨 STRATEGY & AUTHENTICITY 🚨
         1. **EXECUTE THIS STRATEGY**: "{strategy}"
-        2. **BE AUTHENTIC**: Do NOT invent titles or experience. Do NOT rename "Technical Support" to "Engineer" if false. Instead, highlight the *transferable impact* (e.g. "Automated tickets" vs "Resolved tickets").
-        3. **NO FLUFF**: Do not use "marketing speak" or buzzwords that don't match the actual work.
+        2. **BE AUTHENTIC**: Do NOT invent titles or experience. Highlight *transferable impact*.
+        3. **PUNCHY IMPACT**: Use strong action verbs. Be concise but impressive.
         
         🚨 FORMATTING RULES (VIOLATION = FAILURE) 🚨
-        1. **STRICT PAGE LIMIT**: {max_pages} PAGE(S).
-           - CUT older/irrelevant work experience (keep only Title + Company + 1 bullet).
-           - MERGE projects.
-           - REDUCE bullet points (Max 3 per recent role, 1-2 for older).
+        1. **DRACONIAN 1-PAGE LIMIT**: The output MUST fit on {max_pages} page(s).
+           - **ABSOLUTE MAX**: 3 Work Experience entries total.
+           - **ABSOLUTE MAX**: 3 Bullet points per role.
+           - **ABSOLUTE MAX**: 2 Projects.
+           - IF YOU HAVE MORE CONTENT: MERGE older roles into one-liners (Company, Title, Dates) or CUT them.
+           - DO NOT shrink fonts to cheat. CUT CONTENT.
         2. **SKILL FILTERING**:
            - REMOVE these irrelevant skills: {irrelevant_skills}
         3. **LINKS**:
@@ -551,6 +554,8 @@ def format_analysis_display(analysis: dict) -> str:
     # ⚠️ LOW MATCH ALERT
     if analysis.get('is_low_match') or analysis.get('score_before', 50) < 50:
         reason = analysis.get('low_match_reason', 'mismatched experience or skills').lower()
+        feedback = analysis.get('constructive_feedback', 'focus on transferable skills').lower()
+        
         alert_html = f"""
         <div style="background-color: rgba(69, 10, 10, 0.3); border: 1px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
             <p style="margin: 0; color: #fca5a5; font-weight: bold; font-size: 1.1em;">
@@ -559,8 +564,7 @@ def format_analysis_display(analysis: dict) -> str:
             <p style="margin: 8px 0 0 0; font-size: 0.95em; color: #fecaca;">
                 this role is way off given your profile - <b>{reason}</b>.
                 <br><br>
-                is this a role switch that's intentional? was there something that pulled you to the role?
-                or have you done anything related to the role in the past, in any capacity?
+                💡 {feedback}
             </p>
         </div>
         """
