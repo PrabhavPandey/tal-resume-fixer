@@ -685,13 +685,26 @@ def main():
             # Show Strategy Message
             analysis_msg = format_analysis_display(analysis)
             st.session_state.messages.append({"role": "assistant", "content": analysis_msg})
-            st.session_state.messages.append({"role": "assistant", "content": "you cool with this plan?"})
+            
+            # Auto-Cook Check
+            is_low = analysis.get('is_low_match') or analysis.get('score_before', 50) < 50
+            
+            if is_low:
+                st.session_state.messages.append({"role": "assistant", "content": "i need your go-ahead on this."})
+            else:
+                st.session_state.messages.append({"role": "assistant", "content": "strategy is solid. cooking now..."})
+                st.session_state.step = "generating"
+                
             st.rerun()
 
-        # Approval Button
+        # Approval Button (Only shown if stuck in analysis step due to low match)
         col1, col2 = st.columns([1, 2])
         with col1:
-            if st.button("🔥 Yes, Cook", type="primary"):
+            btn_label = "🔥 Yes, Cook"
+            if st.session_state.analysis_results.get('is_low_match'):
+                btn_label = "⚠️ Proceed Anyway"
+                
+            if st.button(btn_label, type="primary"):
                 st.session_state.messages.append({"role": "user", "content": "Yes, cook."})
                 st.session_state.messages.append({"role": "assistant", "content": "bet. rewriting now..."})
                 st.session_state.step = "generating"
