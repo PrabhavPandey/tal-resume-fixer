@@ -424,6 +424,7 @@ class TalAgent:
            - **ABSOLUTE MAX**: 2 Projects total (CUT THE REST).
            - IF YOU HAVE MORE CONTENT: MERGE older roles into one-liners (Company, Title, Dates) or CUT them.
            - DO NOT shrink fonts to cheat. CUT CONTENT.
+           - **DO NOT CUT EDUCATION**: Keep ALL education entries (University AND High School).
         2. **SKILL FILTERING**:
            - REMOVE these irrelevant skills: {irrelevant_skills}
         3. **LINKS**:
