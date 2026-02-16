@@ -243,23 +243,44 @@ class TalAgent:
         )
         return response.text.lower() # Tal speaks lowercase
 
-    def extract_pdf_text(self, file) -> tuple[str, int]:
-        """Extract text and page count from PDF."""
+    def extract_pdf_data(self, file) -> dict:
+        """Extract text, page count, and hyperlinks from PDF."""
         try:
+            file.seek(0) # Reset pointer
             reader = PdfReader(file)
             text = "\n".join([page.extract_text() or "" for page in reader.pages])
-            return text.strip(), len(reader.pages)
+            pages = len(reader.pages)
+            
+            # Extract Metadata Links (Annotations)
+            links = []
+            for page in reader.pages:
+                if "/Annots" in page:
+                    for annot in page["/Annots"]:
+                        try:
+                            obj = annot.get_object()
+                            if "/A" in obj and "/URI" in obj["/A"]:
+                                uri = obj["/A"]["/URI"]
+                                links.append(uri)
+                        except:
+                            continue
+            
+            # Extract Text Links (Regex Fallback)
+            # Remove parentheses/trailing punctuation often caught by regex
+            raw_links = re.findall(r'(https?://[^\s\)\}\],]+)', text)
+            # Add https prefix to shorthand links if missing
+            raw_links += [f"https://{l}" if not l.startswith("http") else l for l in re.findall(r'(?:github\.com/[^\s\)\}\],]+)', text)]
+            raw_links += [f"https://{l}" if not l.startswith("http") else l for l in re.findall(r'(?:linkedin\.com/in/[^\s\)\}\],]+)', text)]
+            
+            all_links = sorted(list(set(links + raw_links)))
+            
+            return {
+                "text": text.strip(),
+                "pages": pages,
+                "links": all_links
+            }
         except Exception as e:
-            return f"Error reading PDF: {e}", 0
-
-    def extract_links(self, text: str) -> str:
-        """Extract links from text to ensure preservation."""
-        # Standard URLs
-        links = re.findall(r'(https?://[^\s]+)', text)
-        # GitHub/LinkedIn shorthand
-        links += re.findall(r'(?:github\.com/[^\s]+)', text)
-        links += re.findall(r'(?:linkedin\.com/in/[^\s]+)', text)
-        return "\n".join(set(links))
+            st.error(f"Error reading PDF: {e}")
+            return {"text": "", "pages": 0, "links": []}
 
     def analyze_resume(self, resume_text: str, jd_text: str) -> dict:
         """
@@ -362,12 +383,13 @@ class TalAgent:
                 "bold": "Hi [Name], I'm the [Role] you're looking for. Here's why: [Link]. Open to a 5-min chat?"
             }
 
-    def generate_latex_content(self, resume_text: str, jd_text: str, analysis: dict, max_pages: int = 1) -> str:
+    def generate_latex_content(self, resume_text: str, jd_text: str, analysis: dict, links: list, max_pages: int = 1) -> str:
         """Generate the full LaTeX code for the resume."""
         
         company = analysis.get("company_name", "the company")
         role = analysis.get("role_title", "the role")
-        links = self.extract_links(resume_text)
+        
+        links_str = "\n".join(links)
         
         prompt = f"""
         You are an expert Resume Writer using LaTeX.
@@ -376,12 +398,15 @@ class TalAgent:
         1. STRICT PAGE LIMIT: {max_pages} PAGE(S). NO EXCEPTIONS.
            - If content spills over, CUT bullet points from oldest roles.
            - Keep spacing tight.
-        2. LINK PRESERVATION:
-           - You MUST include all links found in the original resume.
+        2. LINK CORRECTNESS (ANTI-HALLUCINATION):
+           - ONLY use the links provided in the "VERIFIED LINKS" list below.
+           - DO NOT invent links. If a project link is missing in the list, do not add one.
+           - EXACTLY copy the URL from the list.
+        3. LINK FORMATTING:
            - Format: \\href{{URL}}{{Display Text}}
+           - DISPLAY TEXT MUST BE SHORT (e.g., "Project", "Demo", "Code", "Video").
+           - NEVER use the full URL as the display text (it causes line overflow).
            - DO NOT ESCAPE special characters inside the URL part (e.g. use '_', not '\_').
-           - BAD: \\href{{https://github.com/foo\_bar}}{{...}}
-           - GOOD: \\href{{https://github.com/foo_bar}}{{...}}
         
         TASK: Rewrite this resume for the {role} role at {company}.
         
@@ -397,8 +422,8 @@ class TalAgent:
         - MAX 1-2 lines per bullet point.
         - NO huge walls of text. Be punchy.
         
-        LINKS TO INCLUDE:
-        {links}
+        VERIFIED LINKS (ONLY USE THESE):
+        {links_str}
         
         TEMPLATE TO USE:
         {LATEX_TEMPLATE}
@@ -535,6 +560,7 @@ def main():
         st.session_state.step = "upload" # upload -> jd -> processing -> done
         st.session_state.resume_text = ""
         st.session_state.resume_pages = 1
+        st.session_state.resume_links = []
         st.session_state.jd_text = ""
         st.session_state.cold_dms = None
         
@@ -561,10 +587,14 @@ def main():
         uploaded = st.file_uploader("upload resume (pdf)", type="pdf", label_visibility="collapsed")
         if uploaded:
             with st.spinner("reading..."):
-                text, pages = agent.extract_pdf_text(uploaded)
+                data = agent.extract_pdf_data(uploaded)
+                text = data["text"]
+                pages = data["pages"]
+                
                 if len(text) > 50:
                     st.session_state.resume_text = text
                     st.session_state.resume_pages = pages
+                    st.session_state.resume_links = data["links"]
                     
                     # User msg
                     st.session_state.messages.append({"role": "user", "content": f"Uploaded {uploaded.name} ({pages} pages)"})
@@ -609,6 +639,7 @@ def main():
                 st.session_state.resume_text, 
                 st.session_state.jd_text, 
                 analysis,
+                links=st.session_state.resume_links,
                 max_pages=st.session_state.resume_pages
             )
             st.session_state.latex_content = latex
