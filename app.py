@@ -354,15 +354,18 @@ class TalAgent:
         
         TASK: Write ONE high-impact Cold DM to a Hiring Manager or Founder at {company_name}.
         
-        TONE: {tone}. Punchy. No fluff.
+        CRITICAL CONSTRAINTS:
+        - MAX 50 WORDS.
+        - NO fluff ("I am writing to...", "This role aligns with...").
+        - NO connecting phrases ("While you're hiring...", "The shift from...").
+        - DIRECT & PUNCHY.
         
-        STEPS:
-        1. RESEARCH: Find a specific insight about {company_name} (Recent news, market move, social post, engineering blog, or Reddit discussion).
-        2. HOOK: Start with this insight. "Saw you just launched X..." or "Loved the debate on Reddit about Y..."
-        3. PITCH: Connect it to the candidate's STRONGEST achievement.
-           - STYLE GUIDE: "I don't just [Generic Task]; I [High Impact Result]."
-           - Example: "I don't just run ads; I build growth engines. From scaling to 150k+ users..."
-        4. ASK: Short CTA. "Open to a 10-min chat?"
+        STRUCTURE:
+        1. [Insight] "Saw Gushwork's push into GEO. Smart move."
+        2. [Power Pitch] "I don't just [Generic]; I [Result]. At [Company], I [Specific metric]."
+        3. [CTA] "Open to a 10-min chat?"
+        
+        TONE: {tone}.
         
         RESUME SUMMARY:
         {resume_text[:2000]}
@@ -371,7 +374,7 @@ class TalAgent:
         {jd_text[:2000]}
         
         OUTPUT:
-        Return ONLY the message text. No explanations.
+        Return ONLY the message text. Use line breaks between sections.
         """
         
         try:
