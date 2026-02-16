@@ -288,9 +288,10 @@ class TalAgent:
         Returns structured JSON.
         """
         prompt = f"""
-        You are an expert ATS resume analyst.
+        You are Tal, a brutal but helpful career mentor.
         
         Analyze this resume against the job description.
+        Look specifically for "RED FLAGS" and "DEAL BREAKERS" (e.g., mismatched Years of Experience, Engineering vs Marketing profile, completely wrong industry).
         
         RESUME:
         {resume_text[:10000]}
@@ -309,7 +310,7 @@ class TalAgent:
                 {{"point": "strength description", "why": "why it matters"}}
             ],
             "needs_fixing": [
-                {{"issue": "weakness description", "impact": "negative consequence"}}
+                {{"issue": "BIGGEST RED FLAG OR MISALIGNMENT (e.g. 'Only 2y experience vs 5y required' or 'Profile is Dev, Role is Sales')", "impact": "Why this is a dealbreaker"}}
             ],
             "proposed_changes": [
                 {{"change": "what you will change", "rationale": "why this helps"}}
@@ -317,6 +318,8 @@ class TalAgent:
             "score_before": 50,
             "score_after": 85
         }}
+        
+        IMPORTANT: In 'needs_fixing', PUT THE SINGLE BIGGEST RED FLAG FIRST. Be direct. Call out major mismatches like a mentor would.
         """
         
         try:
