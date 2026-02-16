@@ -175,7 +175,7 @@ LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 % HEADER
 \begin{center}
     {\Huge \scshape FULL_NAME} \\ \vspace{1pt}
-    CONTACT_INFO
+    {\hypersetup{urlcolor=black} CONTACT_INFO}
 \end{center}
 
 % EDUCATION
@@ -430,7 +430,8 @@ class TalAgent:
            - ONLY use these VERIFIED LINKS:
            {links_str}
            - Format: \\href{{URL}}{{Display Text}}
-           - DISPLAY TEXT: USE THE ORIGINAL NAME found in the resume (e.g. "Website", "Demo"). DO NOT rename to "Live App" unless that was the original text.
+           - DISPLAY TEXT: USE THE ORIGINAL NAME found in the resume (e.g. "Website", "Demo"). DO NOT rename to "Live App".
+           - **CRITICAL**: If a project in the input has multiple links (e.g. Video | Website | GitHub), YOU MUST INCLUDE ALL OF THEM. Do not drop "GitHub".
         
         TASK: Rewrite this resume for the {role} role at {company}.
         
