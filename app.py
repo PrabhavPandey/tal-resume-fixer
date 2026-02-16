@@ -284,14 +284,19 @@ class TalAgent:
 
     def analyze_resume(self, resume_text: str, jd_text: str) -> dict:
         """
-        Perform deep analysis of resume vs JD.
+        Perform deep analysis of resume vs JD using Search Grounding.
         Returns structured JSON.
         """
         prompt = f"""
         You are Tal, a brutal but helpful career mentor.
         
-        Analyze this resume against the job description.
-        Look specifically for "RED FLAGS" and "DEAL BREAKERS" (e.g., mismatched Years of Experience, Engineering vs Marketing profile, completely wrong industry).
+        TASK 1: RESEARCH
+        - Use Google Search to find the specific "Tech Stack" and "Culture" of the company in the JD.
+        - Find what skills they value MOST right now.
+        
+        TASK 2: ANALYZE
+        - Identify "RED FLAGS" (mismatches).
+        - Identify "IRRELEVANT SKILLS": Tools/skills in the resume that are NOT required for this specific role and waste space (e.g. "Alteryx" for a React Dev, or "Excel" for a Senior AI Engineer).
         
         RESUME:
         {resume_text[:10000]}
@@ -306,6 +311,7 @@ class TalAgent:
             "company_name": "extracted company name (or 'this company')",
             "role_title": "extracted job title (or 'this role')",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
+            "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
                 {{"point": "strength description", "why": "why it matters"}}
             ],
@@ -319,7 +325,7 @@ class TalAgent:
             "score_after": 85
         }}
         
-        IMPORTANT: In 'needs_fixing', PUT THE SINGLE BIGGEST RED FLAG FIRST. Be direct. Call out major mismatches like a mentor would.
+        IMPORTANT: In 'needs_fixing', PUT THE SINGLE BIGGEST RED FLAG FIRST. Be direct.
         """
         
         try:
@@ -328,6 +334,7 @@ class TalAgent:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
                     temperature=0.3,
                 )
             )
@@ -339,6 +346,7 @@ class TalAgent:
                 "company_name": "the company",
                 "role_title": "the role",
                 "missing_keywords": ["key skills", "metrics"],
+                "irrelevant_skills": [],
                 "good_points": [{"point": "Experience listed", "why": "shows history"}],
                 "needs_fixing": [{"issue": "Generic descriptions", "impact": "low engagement"}],
                 "proposed_changes": [{"change": "Quantify impact", "rationale": "prove value"}],
@@ -404,6 +412,7 @@ class TalAgent:
         
         company = analysis.get("company_name", "the company")
         role = analysis.get("role_title", "the role")
+        irrelevant_skills = analysis.get("irrelevant_skills", [])
         
         links_str = "\n".join(links)
         
@@ -412,17 +421,22 @@ class TalAgent:
         
         🚨 CRITICAL RULES (VIOLATION = FAILURE) 🚨
         1. STRICT PAGE LIMIT: {max_pages} PAGE(S). NO EXCEPTIONS.
-           - If content spills over, CUT bullet points from oldest roles.
+           - YOU HAVE A STRICT CONTENT BUDGET. If content spills over:
+             - CUT older/irrelevant work experience (keep only Title + Company + 1 bullet).
+             - MERGE projects.
+             - REDUCE bullet points (Max 3 per recent role, 1-2 for older).
+           - DO NOT CUT EDUCATION DETAILS (Degree, College, GPA/Grades are MANDATORY).
            - Keep spacing tight.
-        2. LINK CORRECTNESS (ANTI-HALLUCINATION):
-           - ONLY use the links provided in the "VERIFIED LINKS" list below.
-           - DO NOT invent links. If a project link is missing in the list, do not add one.
-           - EXACTLY copy the URL from the list.
-        3. LINK FORMATTING:
+        2. SKILL FILTERING:
+           - EXCLUDE these irrelevant skills: {irrelevant_skills}
+           - Do not list them in the Technical Skills section.
+        3. LINK CORRECTNESS:
+           - ONLY use these VERIFIED LINKS:
+           {links_str}
+           - DO NOT invent links.
            - Format: \\href{{URL}}{{Display Text}}
-           - DISPLAY TEXT MUST BE SHORT (e.g., "Project", "Demo", "Code", "Video").
-           - NEVER use the full URL as the display text (it causes line overflow).
-           - DO NOT ESCAPE special characters inside the URL part (e.g. use '_', not '\_').
+           - DISPLAY TEXT MUST BE SHORT (e.g., "Project", "Demo", "Code").
+           - DO NOT ESCAPE special characters inside the URL part.
         
         TASK: Rewrite this resume for the {role} role at {company}.
         
@@ -432,11 +446,6 @@ class TalAgent:
         3. Use \\textbf{{}} to bold KEY METRICS (e.g., \\textbf{{20% growth}}).
         4. Use action verbs and include JD keywords naturally.
         5. Escape LaTeX special chars (%, $, &, #, _) ONLY in the display text, NOT in URLs.
-        
-        FORMATTING RULES:
-        - MAX 3 bullet points per role/project.
-        - MAX 1-2 lines per bullet point.
-        - NO huge walls of text. Be punchy.
         
         VERIFIED LINKS (ONLY USE THESE):
         {links_str}
