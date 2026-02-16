@@ -353,8 +353,7 @@ class TalAgent:
         highlights = ""
         if analysis:
             good_points = [p.get('point', '') for p in analysis.get('good_points', [])]
-            changes = [p.get('change', '') for p in analysis.get('proposed_changes', [])]
-            highlights = f"\nKEY STRENGTHS TO USE: {', '.join(good_points)}\nREBRANDING STRATEGY: {', '.join(changes)}"
+            highlights = f"\nCANDIDATE STRENGTHS (PICK THE BEST ONE): {', '.join(good_points)}"
         
         prompt = f"""
         You are an elite career strategist.
@@ -363,14 +362,14 @@ class TalAgent:
         
         CRITICAL CONSTRAINTS:
         - MAX 50 WORDS.
-        - NO fluff. NO filler.
-        - PRIORITIZE ENTREPRENEURIAL & GROWTH ACHIEVEMENTS over technical tasks.
-        - IF the candidate has Founder/Startup experience, USE IT.
+        - NO fluff. NO filler phrases.
+        - DIRECT & PUNCHY.
         
         STRUCTURE:
-        1. [Insight] "Capturing demand via LLMs is the future of SEO." (Insight about company/market)
-        2. [Power Pitch] "I build the AI infrastructure that powers growth. At [Company], I [Big Metric]. At [Startup], I [User/Revenue Metric]."
-        3. [CTA] "Open to a 10-min chat?"
+        1. [The Hook] A specific, deep insight about {company_name}, the founder, or their industry. (e.g. "Saw your recent pivot to X...", "Agreed with your take on Y...").
+        2. [The Bridge] "This aligns with my work at [Company]..."
+        3. [The USP] The SINGLE most impressive achievement from the candidate's profile that proves they can solve the company's problem. (e.g. "Scaled to 1M users", "Built the core infra", "Exited a startup").
+        4. [The Ask] "Open to a 10-min chat?"
         
         TONE: {tone}.
         
