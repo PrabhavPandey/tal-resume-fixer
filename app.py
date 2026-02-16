@@ -562,8 +562,12 @@ def format_analysis_display(analysis: dict) -> str:
         lines.append(f"- {item.get('issue', '').lower()}")
     lines.append("") # Spacer
     
-    # Changes (Max 2)
-    lines.append("**the strategy:**")
+    # Strategy (New)
+    strategy = analysis.get("role_translation_strategy", "Focus on relevant impact.")
+    lines.append(f"**the strategy:** {strategy.lower()}\n\n")
+    
+    # Execution (Changes)
+    lines.append("**execution:**")
     for item in analysis.get("proposed_changes", [])[:2]:
         lines.append(f"- {item.get('change', '').lower()}")
     lines.append("") # Spacer
@@ -581,7 +585,7 @@ def format_analysis_display(analysis: dict) -> str:
     """
     
     lines.append(score_html)
-    lines.append("\nlet me cook")
+    # lines.append("\nlet me cook") # Removed, button handles this
     
     return "\n".join(lines)
 
