@@ -529,7 +529,7 @@ def format_analysis_display(analysis: dict) -> str:
     lines = []
     
     # ⚠️ LOW MATCH ALERT
-    if analysis.get('is_low_match') or analysis.get('score_before', 50) < 50:
+    if analysis.get('is_low_match') or analysis.get('score_before', 50) < 35:
         reason = analysis.get('low_match_reason', 'mismatched experience or skills').lower()
         feedback = analysis.get('constructive_feedback', 'focus on transferable skills').lower()
         
@@ -687,7 +687,7 @@ def main():
             st.session_state.messages.append({"role": "assistant", "content": analysis_msg})
             
             # Auto-Cook Check
-            is_low = analysis.get('is_low_match') or analysis.get('score_before', 50) < 50
+            is_low = analysis.get('is_low_match') or analysis.get('score_before', 50) < 35
             
             if is_low:
                 st.session_state.messages.append({"role": "assistant", "content": "i need your go-ahead on this."})
