@@ -850,7 +850,6 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar=avatar):
         st.write(msg["content"])
 
-
 # ─────────────────────────────────────────────────────────────
 # STAGE: AWAITING RESUME UPLOAD
 # ─────────────────────────────────────────────────────────────
@@ -895,7 +894,6 @@ if st.session_state.stage == "awaiting_resume":
             st.session_state.messages.append({"role": "assistant", "content": ack})
             st.session_state.stage = "awaiting_jd"
             st.rerun()
-
 
 # ─────────────────────────────────────────────────────────────
 # STAGE: AWAITING JOB DESCRIPTION
@@ -1017,7 +1015,6 @@ elif st.session_state.stage == "processing":
         st.session_state.stage = "done"
         st.rerun()
 
-
 # ─────────────────────────────────────────────────────────────
 # STAGE: DONE - PDF preview + download
 # ─────────────────────────────────────────────────────────────
@@ -1101,7 +1098,6 @@ elif st.session_state.stage == "done":
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
-
 
 # ─────────────────────────────────────────────────────────────
 # STAGE: RETRY COMPILE
