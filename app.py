@@ -295,7 +295,8 @@ class TalAgent:
         - Find what skills/outcomes they value MOST right now.
         
         TASK 2: STRATEGY
-        - Define a "Role Translation Strategy": How to frame the candidate's *actual* experience to fit this role? (e.g. "Highlight the *business impact* of RAG agents, not just the code").
+        - Define a "Role Translation Strategy": How to frame the candidate's *actual* experience to fit this role?
+        - Explain this STRATEGY directly to the user (e.g. "Look, I need to rebrand your Support role as Customer Success...").
         - Identify "Irrelevant Skills" to cut.
         
         RESUME:
@@ -311,7 +312,7 @@ class TalAgent:
             "company_name": "extracted company name (or 'this company')",
             "role_title": "extracted job title (or 'this role')",
             "company_stage": "Startup / Scaleup / Corporate",
-            "role_translation_strategy": "Directly address user: 'Look, I'm gonna frame your X experience as Y...'",
+            "role_translation_strategy": "Direct explanation of the rebrand strategy to the user (max 20 words)",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
             "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
@@ -564,7 +565,7 @@ def format_analysis_display(analysis: dict) -> str:
     
     # Strategy (New)
     strategy = analysis.get("role_translation_strategy", "Focus on relevant impact.")
-    lines.append(f"**the strategy:** {strategy.lower()}\n\n")
+    lines.append(f"**tal's strategy:** \"{strategy.lower()}\"\n\n")
     
     # Execution (Changes)
     lines.append("**execution:**")
@@ -638,43 +639,34 @@ def main():
         avatar = TAL_AVATAR if msg["role"] == "assistant" else USER_AVATAR
         render_chat_message(msg["role"], msg["content"], avatar)
 
-    # ─── STEP 1: UPLOAD ───
+    # ─── STEP 1: UPLOAD & JD ───
     if st.session_state.step == "upload":
-        uploaded = st.file_uploader("upload resume (pdf)", type="pdf", label_visibility="collapsed")
-        if uploaded:
-            with st.spinner("reading..."):
-                data = agent.extract_pdf_data(uploaded)
-                text = data["text"]
-                pages = data["pages"]
-                
-                if len(text) > 50:
-                    st.session_state.resume_text = text
-                    st.session_state.resume_pages = pages
-                    st.session_state.resume_links = data["links"]
-                    
-                    # User msg
-                    st.session_state.messages.append({"role": "user", "content": f"Uploaded {uploaded.name} ({pages} pages)"})
-                    
-                    # Tal response
-                    ack = agent.chat("I just uploaded my resume.")
-                    st.session_state.messages.append({"role": "assistant", "content": f"{ack}\n\npaste the jd now."})
-                    
-                    st.session_state.step = "jd"
-                    st.rerun()
-                else:
-                    st.error("Could not read text from PDF. Is it an image scan?")
-
-    # ─── STEP 2: JD INPUT ───
-    elif st.session_state.step == "jd":
-        with st.form("jd_form"):
-            jd = st.text_area("paste job description", height=200, placeholder="paste the full JD here...")
-            submitted = st.form_submit_button("analyze match →")
+        st.markdown("### 1. The Inputs")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            uploaded = st.file_uploader("upload resume (pdf)", type="pdf")
+        with col2:
+            jd = st.text_area("paste job description", height=200, placeholder="paste full JD here...", label_visibility="visible")
             
-            if submitted and len(jd) > 50:
-                st.session_state.jd_text = jd
-                st.session_state.messages.append({"role": "user", "content": "Here is the JD."})
-                st.session_state.step = "analysis"
-                st.rerun()
+        submitted = st.button("analyze match →", type="primary", use_container_width=True)
+        
+        if submitted:
+            if uploaded and jd and len(jd) > 50:
+                with st.spinner("reading pdf..."):
+                    data = agent.extract_pdf_data(uploaded)
+                    if len(data["text"]) > 50:
+                        st.session_state.resume_text = data["text"]
+                        st.session_state.resume_pages = data["pages"]
+                        st.session_state.resume_links = data["links"]
+                        st.session_state.jd_text = jd
+                        
+                        st.session_state.messages.append({"role": "user", "content": f"Uploaded {uploaded.name} and JD."})
+                        st.session_state.step = "analysis"
+                        st.rerun()
+                    else:
+                        st.error("Could not read PDF. Is it an image scan?")
+            else:
+                st.warning("Please upload a resume and paste the JD.")
 
     # ─── STEP 3: ANALYSIS & STRATEGY ───
     elif st.session_state.step == "analysis":
