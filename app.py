@@ -121,7 +121,6 @@ LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 \usepackage[usenames,dvipsnames]{color}
 \usepackage{verbatim}
 \usepackage{enumitem}
-\usepackage[hidelinks]{hyperref}
 \usepackage{fancyhdr}
 \usepackage[english]{babel}
 \usepackage{tabularx}
@@ -129,6 +128,7 @@ LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 \usepackage{multicol}
 \setlength{\multicolsep}{-3.0pt}
 \setlength{\columnsep}{-1pt}
+\usepackage[hidelinks]{hyperref}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -372,24 +372,32 @@ class TalAgent:
         prompt = f"""
         You are an expert Resume Writer using LaTeX.
         
+        🚨 CRITICAL RULES (VIOLATION = FAILURE) 🚨
+        1. STRICT PAGE LIMIT: {max_pages} PAGE(S). NO EXCEPTIONS.
+           - If content spills over, CUT bullet points from oldest roles.
+           - Keep spacing tight.
+        2. LINK PRESERVATION:
+           - You MUST include all links found in the original resume.
+           - Format: \\href{{URL}}{{Display Text}}
+           - DO NOT ESCAPE special characters inside the URL part (e.g. use '_', not '\_').
+           - BAD: \\href{{https://github.com/foo\_bar}}{{...}}
+           - GOOD: \\href{{https://github.com/foo_bar}}{{...}}
+        
         TASK: Rewrite this resume for the {role} role at {company}.
         
         CONSTRAINTS:
         1. Output ONLY valid LaTeX code starting with \\documentclass.
-        2. STRICTLY fit content to {max_pages} page(s). Be concise.
-        3. Use Jake's Resume Template structure (provided below).
-        4. Use \\textbf{{}} to bold KEY METRICS (e.g., \\textbf{{20% growth}}).
-        5. PRESERVE ALL LINKS (GitHub, LinkedIn, Projects) using \\href{{url}}{{text}}.
-        6. Use action verbs and include JD keywords naturally.
-        7. Escape LaTeX special chars (%, $, &, #, _) properly (\\%, \\$, etc).
+        2. Use Jake's Resume Template structure (provided below).
+        3. Use \\textbf{{}} to bold KEY METRICS (e.g., \\textbf{{20% growth}}).
+        4. Use action verbs and include JD keywords naturally.
+        5. Escape LaTeX special chars (%, $, &, #, _) ONLY in the display text, NOT in URLs.
         
         FORMATTING RULES:
         - MAX 3 bullet points per role/project.
-        - MAX 2 lines per bullet point.
+        - MAX 1-2 lines per bullet point.
         - NO huge walls of text. Be punchy.
-        - IF A LINK WAS IN THE ORIGINAL RESUME, IT MUST BE IN THE NEW ONE.
         
-        LINKS FOUND IN ORIGINAL RESUME (MUST PRESERVE):
+        LINKS TO INCLUDE:
         {links}
         
         TEMPLATE TO USE:
