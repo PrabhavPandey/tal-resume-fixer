@@ -298,6 +298,7 @@ class TalAgent:
         - Define a "Role Translation Strategy": How to frame the candidate's *actual* experience to fit this role?
         - Explain this STRATEGY directly to the user (e.g. "Look, I need to rebrand your Support role as Customer Success...").
         - Identify "Irrelevant Skills" to cut.
+        - **MATCH CHECK**: If the candidate is totally unqualified (e.g. 2y experience for VP role, or Dev applying for Legal), flag it.
         
         RESUME:
         {resume_text[:10000]}
@@ -313,6 +314,8 @@ class TalAgent:
             "role_title": "extracted job title (or 'this role')",
             "company_stage": "Startup / Scaleup / Corporate",
             "role_translation_strategy": "Direct explanation of the rebrand strategy to the user (max 20 words)",
+            "is_low_match": true/false,
+            "low_match_reason": "Specific reason if low match (e.g. 'Role needs 8y exp, you have 2y')",
             "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
             "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
             "good_points": [
@@ -544,6 +547,25 @@ def format_analysis_display(analysis: dict) -> str:
         role_str = f"{role} role"
         
     lines = []
+    
+    # ⚠️ LOW MATCH ALERT
+    if analysis.get('is_low_match') or analysis.get('score_before', 50) < 50:
+        reason = analysis.get('low_match_reason', 'mismatched experience or skills').lower()
+        alert_html = f"""
+        <div style="background-color: rgba(69, 10, 10, 0.3); border: 1px solid #ef4444; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #fca5a5; font-weight: bold; font-size: 1.1em;">
+                ⚠️ low match alert : (
+            </p>
+            <p style="margin: 8px 0 0 0; font-size: 0.95em; color: #fecaca;">
+                this role is way off given your profile - <b>{reason}</b>.
+                <br><br>
+                is this a role switch that's intentional? was there something that pulled you to the role?
+                or have you done anything related to the role in the past, in any capacity?
+            </p>
+        </div>
+        """
+        lines.append(alert_html)
+    
     lines.append(f"alright i've analyzed your resume for the **{role_str}** at **{company}**\n\n")
     
     # Missing Keywords
@@ -551,15 +573,15 @@ def format_analysis_display(analysis: dict) -> str:
     if missing:
         lines.append(f"**missing keywords:** {', '.join(missing[:5]).lower()}\n\n")
     
-    # Good Points (Max 1)
+    # Good Points (Max 3)
     lines.append("**what's working:**")
-    for item in analysis.get("good_points", [])[:1]:
+    for item in analysis.get("good_points", [])[:3]:
         lines.append(f"- {item.get('point', '').lower()}")
     lines.append("") # Spacer
     
-    # Fixes (Max 1)
+    # Fixes (Max 2)
     lines.append("**what needs fixing:**")
-    for item in analysis.get("needs_fixing", [])[:1]:
+    for item in analysis.get("needs_fixing", [])[:2]:
         lines.append(f"- {item.get('issue', '').lower()}")
     lines.append("") # Spacer
     
