@@ -502,6 +502,14 @@ class TalAgent:
 # UI HELPERS
 # ─────────────────────────────────────────────────────────────
 
+def img_to_base64(image_path):
+    """Convert image to base64 for embedding in HTML."""
+    try:
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except Exception:
+        return None
+
 def render_chat_message(role, content, avatar=None):
     with st.chat_message(role, avatar=avatar):
         if role == "assistant":
@@ -597,7 +605,13 @@ def main():
         st.session_state.dm_tone = "Professional & Insightful"
 
     # Header
-    st.markdown('<div class="main-title">🦊 tal - resume fixer</div>', unsafe_allow_html=True)
+    tal_img = img_to_base64(TAL_AVATAR)
+    if tal_img:
+        icon_html = f'<img src="data:image/png;base64,{tal_img}" style="width: 60px; height: 60px; vertical-align: bottom; margin-right: 10px;">'
+    else:
+        icon_html = "🦊 "
+        
+    st.markdown(f'<div class="main-title">{icon_html}tal - resume fixer</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">ats-optimized. recruiter-approved. no fluff.</div>', unsafe_allow_html=True)
 
     # Agent Init
