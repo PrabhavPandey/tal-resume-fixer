@@ -101,17 +101,6 @@ MODEL_NAME = "gemini-3-pro-preview"
 TAL_AVATAR = "assets/tal_avatar.png" if os.path.exists("assets/tal_avatar.png") else "🦊"
 USER_AVATAR = "assets/user_avatar.png" if os.path.exists("assets/user_avatar.png") else "👤"
 
-TAL_SYSTEM_PROMPT = """You are Tal, a "chonky fox" and career saarthi (guide).
-Voice:
-- Lowercase, casual, direct, punchy.
-- Brutally honest but supportive.
-- Like a smart friend texting you.
-- NO marketing fluff. NO "happy to help". NO generic bot responses.
-- Use line breaks for pacing.
-- Hate corporate jargon ("synergy", "rockstar").
-- Love clear, quantified achievements.
-"""
-
 LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 \documentclass[letterpaper,11pt]{article}
 \usepackage{latexsym}
@@ -128,7 +117,7 @@ LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 \usepackage{multicol}
 \setlength{\multicolsep}{-3.0pt}
 \setlength{\columnsep}{-1pt}
-\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true, urlcolor=RoyalBlue, linkcolor=RoyalBlue]{hyperref}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -229,19 +218,6 @@ class TalAgent:
         except Exception:
             st.error("Missing GEMINI_API_KEY in secrets.toml")
             st.stop()
-
-    def chat(self, user_msg: str) -> str:
-        """Get a simple chat response from Tal."""
-        prompt = f"{TAL_SYSTEM_PROMPT}\nUser: {user_msg}\nTal:"
-        response = self.client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.8,
-                max_output_tokens=300,
-            )
-        )
-        return response.text.lower() # Tal speaks lowercase
 
     def extract_pdf_data(self, file) -> dict:
         """Extract text, page count, and hyperlinks from PDF."""
@@ -439,12 +415,13 @@ class TalAgent:
         1. **EXECUTE THIS STRATEGY**: "{strategy}"
         2. **BE AUTHENTIC**: Do NOT invent titles or experience. Highlight *transferable impact*.
         3. **PUNCHY IMPACT**: Use strong action verbs. Be concise but impressive.
+        4. **BOLD METRICS**: BOLD specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{Python}}).
         
         🚨 FORMATTING RULES (VIOLATION = FAILURE) 🚨
         1. **DRACONIAN 1-PAGE LIMIT**: The output MUST fit on {max_pages} page(s).
            - **ABSOLUTE MAX**: 3 Work Experience entries total.
            - **ABSOLUTE MAX**: 3 Bullet points per role.
-           - **ABSOLUTE MAX**: 2 Projects.
+           - **ABSOLUTE MAX**: 2 Projects total (CUT THE REST).
            - IF YOU HAVE MORE CONTENT: MERGE older roles into one-liners (Company, Title, Dates) or CUT them.
            - DO NOT shrink fonts to cheat. CUT CONTENT.
         2. **SKILL FILTERING**:
@@ -453,7 +430,7 @@ class TalAgent:
            - ONLY use these VERIFIED LINKS:
            {links_str}
            - Format: \\href{{URL}}{{Display Text}}
-           - DISPLAY TEXT MUST BE SHORT (e.g. "Project", "Code").
+           - DISPLAY TEXT: USE THE ORIGINAL NAME found in the resume (e.g. "Website", "Demo"). DO NOT rename to "Live App" unless that was the original text.
         
         TASK: Rewrite this resume for the {role} role at {company}.
         
