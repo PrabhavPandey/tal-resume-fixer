@@ -346,8 +346,15 @@ class TalAgent:
                 "score_after": 80
             }
 
-    def generate_cold_dm(self, resume_text: str, jd_text: str, company_name: str, tone: str = "professional but bold") -> str:
+    def generate_cold_dm(self, resume_text: str, jd_text: str, company_name: str, tone: str = "professional but bold", analysis: dict = None) -> str:
         """Generate a single, deeply researched Cold DM using Google Search."""
+        
+        # Extract best points from analysis if available
+        highlights = ""
+        if analysis:
+            good_points = [p.get('point', '') for p in analysis.get('good_points', [])]
+            changes = [p.get('change', '') for p in analysis.get('proposed_changes', [])]
+            highlights = f"\nKEY STRENGTHS TO USE: {', '.join(good_points)}\nREBRANDING STRATEGY: {', '.join(changes)}"
         
         prompt = f"""
         You are an elite career strategist.
@@ -356,13 +363,13 @@ class TalAgent:
         
         CRITICAL CONSTRAINTS:
         - MAX 50 WORDS.
-        - NO fluff ("I am writing to...", "This role aligns with...").
-        - NO connecting phrases ("While you're hiring...", "The shift from...").
-        - DIRECT & PUNCHY.
+        - NO fluff. NO filler.
+        - PRIORITIZE ENTREPRENEURIAL & GROWTH ACHIEVEMENTS over technical tasks.
+        - IF the candidate has Founder/Startup experience, USE IT.
         
         STRUCTURE:
-        1. [Insight] "Saw Gushwork's push into GEO. Smart move."
-        2. [Power Pitch] "I don't just [Generic]; I [Result]. At [Company], I [Specific metric]."
+        1. [Insight] "Capturing demand via LLMs is the future of SEO." (Insight about company/market)
+        2. [Power Pitch] "I build the AI infrastructure that powers growth. At [Company], I [Big Metric]. At [Startup], I [User/Revenue Metric]."
         3. [CTA] "Open to a 10-min chat?"
         
         TONE: {tone}.
@@ -372,6 +379,7 @@ class TalAgent:
         
         JOB DESCRIPTION SUMMARY:
         {jd_text[:2000]}
+        {highlights}
         
         OUTPUT:
         Return ONLY the message text. Use line breaks between sections.
@@ -648,6 +656,7 @@ def main():
             st.write("analyzing match...")
             analysis = agent.analyze_resume(st.session_state.resume_text, st.session_state.jd_text)
             st.session_state.company_name = analysis.get("company_name", "the company")
+            st.session_state.analysis_results = analysis
             
             # Show analysis
             analysis_msg = format_analysis_display(analysis)
@@ -670,7 +679,8 @@ def main():
                 st.session_state.resume_text, 
                 st.session_state.jd_text, 
                 st.session_state.company_name,
-                tone=st.session_state.dm_tone
+                tone=st.session_state.dm_tone,
+                analysis=st.session_state.analysis_results
             )
             st.session_state.cold_dm = dm
             
@@ -752,7 +762,8 @@ def main():
                         st.session_state.resume_text, 
                         st.session_state.jd_text, 
                         st.session_state.company_name,
-                        tone=new_tone
+                        tone=new_tone,
+                        analysis=st.session_state.get('analysis_results')
                     )
                     st.session_state.cold_dm = new_dm
                     st.rerun()
