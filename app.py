@@ -346,45 +346,53 @@ class TalAgent:
                 "score_after": 80
             }
 
-    def generate_cold_dms(self, resume_text: str, jd_text: str) -> dict:
-        """Generate 3 high-impact cold DMs."""
+    def generate_cold_dm(self, resume_text: str, jd_text: str, company_name: str, tone: str = "professional but bold") -> str:
+        """Generate a single, deeply researched Cold DM using Google Search."""
+        
         prompt = f"""
-        You are a fearless career strategist.
+        You are an elite headhunter and career strategist.
         
-        Based on this candidate's resume and the JD, write 3 cold DM messages to the hiring manager.
+        TASK: Write ONE high-impact Cold DM to a founder or hiring manager at {company_name}.
         
-        RESUME SUMMARY: {resume_text[:3000]}
-        JD SUMMARY: {jd_text[:3000]}
+        TONE: {tone}
         
-        OUTPUT 3 OPTIONS (JSON):
-        1. "pain_killer": Identify a specific problem in the JD and say how I solve it. (Max 50 words)
-        2. "insider": Mention a recent trend/news in their industry and connect it to me. (Max 50 words)
-        3. "bold": Short, direct, confident ask. (Max 40 words)
+        STEPS:
+        1. SEARCH the web for {company_name}. Look for:
+           - Recent news, funding, or product launches.
+           - Founder's recent posts (Twitter/X, LinkedIn, Blogs).
+           - Engineering blog posts or tech stack details.
+           - Discussions on Reddit, Grapevine, or Blind about their culture/challenges.
+        2. SYNTHESIZE a specific "Hook". Do NOT use generic praise.
+           - GOOD: "Saw your recent talk about scaling the v2 API to 10k RPS..."
+           - GOOD: "Noticed on Grapevine that you're expanding the GTM team for the US market..."
+           - BAD: "I love your mission and values..."
+        3. CONNECT it to the candidate's resume (Summary provided below). Show exactly how they solve a current problem.
+        4. DRAFT the message (Max 60-80 words).
         
-        Return JSON:
-        {{
-            "pain_killer": "message text",
-            "insider": "message text",
-            "bold": "message text"
-        }}
+        RESUME SUMMARY:
+        {resume_text[:2000]}
+        
+        JOB DESCRIPTION SUMMARY:
+        {jd_text[:2000]}
+        
+        OUTPUT:
+        Return ONLY the message text. No explanations. No "Here is the draft:". Just the message.
         """
         
         try:
+            # Enable Google Search Grounding
             response = self.client.models.generate_content(
                 model=MODEL_NAME,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.7,
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                    temperature=0.8,
                 )
             )
-            return json.loads(response.text)
-        except Exception:
-            return {
-                "pain_killer": "Hi [Name], saw you're hiring. My background in [Skill] solves [Problem]. Let's chat?",
-                "insider": "Hi [Name], love what [Company] is doing with [Trend]. I can help scale that.",
-                "bold": "Hi [Name], I'm the [Role] you're looking for. Here's why: [Link]. Open to a 5-min chat?"
-            }
+            return response.text.strip()
+        except Exception as e:
+            # Fallback if search unavailable
+            return f"Hi [Name], I've been following {company_name} and noticed your work on [Specific Project from JD]. My background matches this perfectly. Let's chat? (Search unavailable: {e})"
 
     def generate_latex_content(self, resume_text: str, jd_text: str, analysis: dict, links: list, max_pages: int = 1) -> str:
         """Generate the full LaTeX code for the resume."""
@@ -565,7 +573,9 @@ def main():
         st.session_state.resume_pages = 1
         st.session_state.resume_links = []
         st.session_state.jd_text = ""
-        st.session_state.cold_dms = None
+        st.session_state.cold_dm = ""
+        st.session_state.company_name = ""
+        st.session_state.dm_tone = "Professional & Insightful"
         
         # Opening Line
         st.session_state.messages.append({
@@ -631,6 +641,7 @@ def main():
             # 1. Analyze
             st.write("analyzing match...")
             analysis = agent.analyze_resume(st.session_state.resume_text, st.session_state.jd_text)
+            st.session_state.company_name = analysis.get("company_name", "the company")
             
             # Show analysis
             analysis_msg = format_analysis_display(analysis)
@@ -647,10 +658,15 @@ def main():
             )
             st.session_state.latex_content = latex
             
-            # 3. Generate Cold DMs (New)
-            st.write("drafting cold DMs...")
-            dms = agent.generate_cold_dms(st.session_state.resume_text, st.session_state.jd_text)
-            st.session_state.cold_dms = dms
+            # 3. Generate Cold DM (Deep Research)
+            st.write("researching company & drafting DM...")
+            dm = agent.generate_cold_dm(
+                st.session_state.resume_text, 
+                st.session_state.jd_text, 
+                st.session_state.company_name,
+                tone=st.session_state.dm_tone
+            )
+            st.session_state.cold_dm = dm
             
             # 4. Compile
             st.write("compiling pdf...")
@@ -706,19 +722,34 @@ def main():
                 use_container_width=True
             )
             
-        # Cold DMs Section
-        if st.session_state.cold_dms:
-            st.markdown("### 📨 Cold DMs (Get Hired)")
-            dms = st.session_state.cold_dms
+        # Cold DM Section
+        if st.session_state.cold_dm:
+            st.divider()
+            st.markdown(f"### 📨 The Cold DM ({st.session_state.dm_tone})")
+            st.info("💡 Pro Tip: Tal researched the company to write this. Send it to the Founder/HM directly.")
+            st.code(st.session_state.cold_dm, language="text")
             
-            with st.expander("Option 1: The Pain Killer (Problem Solver)", expanded=True):
-                st.code(dms.get("pain_killer", ""), language="text")
+            if st.button("🔄 Regenerate with New Tone"):
+                # Cycle tone
+                tones = ["Direct & Bold", "Casual & Witty", "Professional & Insightful"]
+                current_tone = st.session_state.dm_tone
+                # Find next tone
+                try:
+                    next_idx = (tones.index(current_tone) + 1) % len(tones)
+                except ValueError:
+                    next_idx = 0
+                new_tone = tones[next_idx]
+                st.session_state.dm_tone = new_tone
                 
-            with st.expander("Option 2: The Insider (Company/Industry Context)"):
-                st.code(dms.get("insider", ""), language="text")
-                
-            with st.expander("Option 3: The Bold (Direct Ask)"):
-                st.code(dms.get("bold", ""), language="text")
+                with st.spinner(f"Re-researching & drafting ({new_tone})..."):
+                    new_dm = agent.generate_cold_dm(
+                        st.session_state.resume_text, 
+                        st.session_state.jd_text, 
+                        st.session_state.company_name,
+                        tone=new_tone
+                    )
+                    st.session_state.cold_dm = new_dm
+                    st.rerun()
             
         if st.button("🔄 Start Over"):
             st.session_state.clear()
