@@ -350,24 +350,19 @@ class TalAgent:
         """Generate a single, deeply researched Cold DM using Google Search."""
         
         prompt = f"""
-        You are an elite headhunter and career strategist.
+        You are an elite career strategist.
         
-        TASK: Write ONE high-impact Cold DM to a founder or hiring manager at {company_name}.
+        TASK: Write ONE high-impact Cold DM to a Hiring Manager or Founder at {company_name}.
         
-        TONE: {tone}
+        TONE: {tone}. Punchy. No fluff.
         
         STEPS:
-        1. SEARCH the web for {company_name}. Look for:
-           - Recent news, funding, or product launches.
-           - Founder's recent posts (Twitter/X, LinkedIn, Blogs).
-           - Engineering blog posts or tech stack details.
-           - Discussions on Reddit, Grapevine, or Blind about their culture/challenges.
-        2. SYNTHESIZE a specific "Hook". Do NOT use generic praise.
-           - GOOD: "Saw your recent talk about scaling the v2 API to 10k RPS..."
-           - GOOD: "Noticed on Grapevine that you're expanding the GTM team for the US market..."
-           - BAD: "I love your mission and values..."
-        3. CONNECT it to the candidate's resume (Summary provided below). Show exactly how they solve a current problem.
-        4. DRAFT the message (Max 60-80 words).
+        1. RESEARCH: Find a specific insight about {company_name} (Recent news, market move, social post, engineering blog, or Reddit discussion).
+        2. HOOK: Start with this insight. "Saw you just launched X..." or "Loved the debate on Reddit about Y..."
+        3. PITCH: Connect it to the candidate's STRONGEST achievement.
+           - STYLE GUIDE: "I don't just [Generic Task]; I [High Impact Result]."
+           - Example: "I don't just run ads; I build growth engines. From scaling to 150k+ users..."
+        4. ASK: Short CTA. "Open to a 10-min chat?"
         
         RESUME SUMMARY:
         {resume_text[:2000]}
@@ -376,7 +371,7 @@ class TalAgent:
         {jd_text[:2000]}
         
         OUTPUT:
-        Return ONLY the message text. No explanations. No "Here is the draft:". Just the message.
+        Return ONLY the message text. No explanations.
         """
         
         try:
@@ -582,6 +577,14 @@ def main():
             "role": "assistant",
             "content": "yo. i'm tal.\n\ndrop your resume pdf below. let's fix it."
         })
+    
+    # Hot-reload safety: Ensure new keys exist even if session is old
+    if "cold_dm" not in st.session_state:
+        st.session_state.cold_dm = ""
+    if "company_name" not in st.session_state:
+        st.session_state.company_name = ""
+    if "dm_tone" not in st.session_state:
+        st.session_state.dm_tone = "Professional & Insightful"
 
     # Header
     st.markdown('<div class="main-title">🦊 tal - resume fixer</div>', unsafe_allow_html=True)
