@@ -404,14 +404,14 @@ class TalAgent:
         2. **be authentic**: do NOT invent titles or experience. highlight *transferable impact*.
         3. **punchy impact**: use strong action verbs. be concise but impressive.
         4. **bold metrics**: bold specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{python}}).
+        5. **jd alignment**: scan the 'need to have' section of the jd. ensure key skills (e.g. react, typescript, redux) appear in the experience bullets if the candidate has them.
         
         🚨 formatting rules (violation = failure) 🚨
-        1. **hard 1-page limit**: the final pdf must be exactly 1 page.
-           - **absolute max**: 2 work experience entries total (unless >5 years experience, then max 3).
-           - **absolute max**: 2 bullet points per role (keep them concise, 1 line ideally).
-           - **absolute max**: 2 projects total (cut the rest, max 2 bullets each).
-           - if content still spills, cut the oldest work experience first, then the oldest project.
-           - do NOT shrink fonts or margins to cheat. cut content.
+        1. **full 1-page density**: the final pdf must completely fill 1 page (no large whitespace at bottom).
+           - **include all relevant roles**: do not arbitrarily cut roles. include all roles relevant to the target job (especially frontend/ui roles).
+           - **bullet count**: use 3-5 bullets for recent/relevant roles to fill the page. use 2-3 for older roles.
+           - **projects**: include top 2-3 relevant projects.
+           - **overflow handling**: only if content exceeds 1 page, *then* trim the oldest/least relevant role or reduce bullet count. do not start by cutting.
            - **do not cut education**: keep all education entries (university and high school).
         2. **skill filtering**:
            - remove these irrelevant skills: {irrelevant_skills}
