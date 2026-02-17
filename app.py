@@ -410,11 +410,13 @@ class TalAgent:
         4. **bold metrics**: bold specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{python}}).
         
         🚨 formatting rules (violation = failure) 🚨
-        1. **adaptive 1-page length**: the final pdf must fill the page (~85-95% full).
-           - **adjust content**: if the candidate has little experience, expand bullet points (3-4 per role) and include more projects to fill space.
-           - **condense if needed**: if the candidate has too much, cut older roles/projects and limit bullets to 2-3 to fit exactly on 1 page.
-           - **do not** leave large whitespace at the bottom. make it look complete.
-           - **do NOT cut education**: keep all education entries (university and high school).
+        1. **hard 1-page limit**: the final pdf must be exactly 1 page.
+           - **absolute max**: 2 work experience entries total (unless >5 years experience, then max 3).
+           - **absolute max**: 3 bullet points per role.
+           - **absolute max**: 2 projects total (cut the rest).
+           - if content still spills, cut the oldest work experience first, then the oldest project.
+           - do NOT shrink fonts or margins to cheat. cut content.
+           - **do not cut education**: keep all education entries (university and high school).
         2. **skill filtering**:
            - remove these irrelevant skills: {irrelevant_skills}
         3. **links**:
@@ -738,7 +740,7 @@ def main():
                 st.info("preview unavailable (library missing). download below.")
                 
             # Buttons
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 st.download_button(
                     "📥 download pdf",
@@ -759,6 +761,14 @@ def main():
                     )
                 else:
                     st.info("docx unavailable.")
+            with col3:
+                st.download_button(
+                    "📄 download .tex",
+                    data=st.session_state.latex_content,
+                    file_name="Tal_Resume.tex",
+                    mime="text/plain",
+                    use_container_width=True
+                )
         else:
             st.error("pdf compilation failed. but i generated the code!")
             if st.session_state.compile_error:
