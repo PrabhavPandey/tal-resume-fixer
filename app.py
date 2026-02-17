@@ -12,6 +12,11 @@ import base64
 import os
 import json
 import re
+import tempfile
+try:
+    from pdf2docx import Converter
+except ImportError:
+    Converter = None
 
 try:
     from streamlit_pdf_viewer import pdf_viewer
@@ -405,12 +410,10 @@ class TalAgent:
         4. **bold metrics**: bold specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{python}}).
         
         🚨 formatting rules (violation = failure) 🚨
-        1. **hard 1-page limit**: the final pdf must be exactly 1 page.
-           - **max**: 2 work experience entries total.
-           - **max**: 2 bullet points per role.
-           - **max**: 2 projects total, 2 bullets each.
-           - if content still spills, cut the oldest work experience first, then the oldest project.
-           - do NOT shrink fonts or margins to cheat. cut content.
+        1. **adaptive 1-page length**: the final pdf must fill the page (~85-95% full).
+           - **adjust content**: if the candidate has little experience, expand bullet points (3-4 per role) and include more projects to fill space.
+           - **condense if needed**: if the candidate has too much, cut older roles/projects and limit bullets to 2-3 to fit exactly on 1 page.
+           - **do not** leave large whitespace at the bottom. make it look complete.
            - **do NOT cut education**: keep all education entries (university and high school).
         2. **skill filtering**:
            - remove these irrelevant skills: {irrelevant_skills}
@@ -488,6 +491,35 @@ class TalAgent:
             pass
             
         return None, "Compilation failed. Please download the .tex file and use Overleaf."
+
+    def convert_pdf_to_docx(self, pdf_bytes: bytes) -> bytes:
+        """Convert PDF bytes to DOCX bytes."""
+        if not Converter or not pdf_bytes:
+            return None
+        
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_temp:
+                pdf_temp.write(pdf_bytes)
+                pdf_path = pdf_temp.name
+            
+            docx_path = pdf_path.replace(".pdf", ".docx")
+            
+            cv = Converter(pdf_path)
+            cv.convert(docx_path)
+            cv.close()
+            
+            with open(docx_path, "rb") as f:
+                docx_bytes = f.read()
+                
+            # Cleanup
+            os.remove(pdf_path)
+            if os.path.exists(docx_path):
+                os.remove(docx_path)
+            
+            return docx_bytes
+        except Exception as e:
+            st.error(f"DOCX conversion failed: {e}")
+            return None
 
 # ─────────────────────────────────────────────────────────────
 # UI HELPERS
@@ -582,6 +614,7 @@ def main():
         st.session_state.jd_text = ""
         st.session_state.cold_dm = ""
         st.session_state.company_name = ""
+        st.session_state.docx_bytes = None
         
         # Opening Line
         st.session_state.messages.append({
@@ -683,6 +716,12 @@ def main():
             st.session_state.pdf_bytes = pdf_bytes
             st.session_state.compile_error = error
             
+            # 3. Convert to DOCX (if successful)
+            if pdf_bytes:
+                st.write("converting to docx...")
+                docx_bytes = agent.convert_pdf_to_docx(pdf_bytes)
+                st.session_state.docx_bytes = docx_bytes
+            
             status.update(label="done!", state="complete")
             st.session_state.step = "done"
             st.rerun()
@@ -710,13 +749,16 @@ def main():
                     type="primary"
                 )
             with col2:
-                st.download_button(
-                    "📄 download .tex",
-                    data=st.session_state.latex_content,
-                    file_name="Tal_Resume.tex",
-                    mime="text/plain",
-                    use_container_width=True
-                )
+                if st.session_state.docx_bytes:
+                    st.download_button(
+                        "📄 download .docx",
+                        data=st.session_state.docx_bytes,
+                        file_name="Tal_Resume.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
+                    )
+                else:
+                    st.info("docx unavailable.")
         else:
             st.error("pdf compilation failed. but i generated the code!")
             if st.session_state.compile_error:
