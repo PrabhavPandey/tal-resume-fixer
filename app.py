@@ -12,12 +12,6 @@ import base64
 import os
 import json
 import re
-import tempfile
-try:
-    from pdf2docx import Converter
-except ImportError:
-    Converter = None
-
 try:
     from streamlit_pdf_viewer import pdf_viewer
 except ImportError:
@@ -268,6 +262,8 @@ class TalAgent:
         - define a "role translation strategy": how to frame the candidate's *actual* experience to fit this role?
         - explain this strategy directly to the user (e.g. "look, i need to rebrand your support role as customer success...").
         - identify "irrelevant skills" to cut.
+        - **missing keywords**: identify specific **technical hard skills, tools, languages, or frameworks** (e.g. "python", "aws", "react", "tableau") missing from the resume that are crucial for the jd. **do not** list soft skills like "leadership", "communication", or "kpi tracking".
+        - **missing keywords**: identify specific **hard skills, tools, languages, or frameworks** (e.g. "python", "aws", "react") missing from the resume that are crucial for the jd. **ignore soft skills** like "communication" or "stakeholder management".
         
         resume:
         {resume_text[:10000]}
@@ -412,8 +408,8 @@ class TalAgent:
         🚨 formatting rules (violation = failure) 🚨
         1. **hard 1-page limit**: the final pdf must be exactly 1 page.
            - **absolute max**: 2 work experience entries total (unless >5 years experience, then max 3).
-           - **absolute max**: 3 bullet points per role.
-           - **absolute max**: 2 projects total (cut the rest).
+           - **absolute max**: 2 bullet points per role (keep them concise, 1 line ideally).
+           - **absolute max**: 2 projects total (cut the rest, max 2 bullets each).
            - if content still spills, cut the oldest work experience first, then the oldest project.
            - do NOT shrink fonts or margins to cheat. cut content.
            - **do not cut education**: keep all education entries (university and high school).
@@ -493,35 +489,6 @@ class TalAgent:
             pass
             
         return None, "Compilation failed. Please download the .tex file and use Overleaf."
-
-    def convert_pdf_to_docx(self, pdf_bytes: bytes) -> bytes:
-        """Convert PDF bytes to DOCX bytes."""
-        if not Converter or not pdf_bytes:
-            return None
-        
-        try:
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_temp:
-                pdf_temp.write(pdf_bytes)
-                pdf_path = pdf_temp.name
-            
-            docx_path = pdf_path.replace(".pdf", ".docx")
-            
-            cv = Converter(pdf_path)
-            cv.convert(docx_path)
-            cv.close()
-            
-            with open(docx_path, "rb") as f:
-                docx_bytes = f.read()
-                
-            # Cleanup
-            os.remove(pdf_path)
-            if os.path.exists(docx_path):
-                os.remove(docx_path)
-            
-            return docx_bytes
-        except Exception as e:
-            st.error(f"DOCX conversion failed: {e}")
-            return None
 
 # ─────────────────────────────────────────────────────────────
 # UI HELPERS
@@ -616,7 +583,6 @@ def main():
         st.session_state.jd_text = ""
         st.session_state.cold_dm = ""
         st.session_state.company_name = ""
-        st.session_state.docx_bytes = None
         
         # Opening Line
         st.session_state.messages.append({
@@ -718,12 +684,6 @@ def main():
             st.session_state.pdf_bytes = pdf_bytes
             st.session_state.compile_error = error
             
-            # 3. Convert to DOCX (if successful)
-            if pdf_bytes:
-                st.write("converting to docx...")
-                docx_bytes = agent.convert_pdf_to_docx(pdf_bytes)
-                st.session_state.docx_bytes = docx_bytes
-            
             status.update(label="done!", state="complete")
             st.session_state.step = "done"
             st.rerun()
@@ -740,7 +700,7 @@ def main():
                 st.info("preview unavailable (library missing). download below.")
                 
             # Buttons
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             with col1:
                 st.download_button(
                     "📥 download pdf",
@@ -751,17 +711,6 @@ def main():
                     type="primary"
                 )
             with col2:
-                if st.session_state.docx_bytes:
-                    st.download_button(
-                        "📄 download .docx",
-                        data=st.session_state.docx_bytes,
-                        file_name="Tal_Resume.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True
-                    )
-                else:
-                    st.info("docx unavailable.")
-            with col3:
                 st.download_button(
                     "📄 download .tex",
                     data=st.session_state.latex_content,

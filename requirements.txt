@@ -3,5 +3,3 @@ google-genai>=1.0.0
 pymupdf>=1.26.0
 requests>=2.31.0
 streamlit-pdf-viewer>=0.0.18
-pdf2docx>=0.5.6
-opencv-python-headless>=4.8.0
