@@ -6,7 +6,7 @@ Clean architecture, robust parsing, and a chonky fox persona.
 import streamlit as st
 from google import genai
 from google.genai import types
-from PyPDF2 import PdfReader
+import fitz  # PyMuPDF
 import requests
 import base64
 import os
@@ -211,28 +211,26 @@ class TalAgent:
             st.stop()
 
     def extract_pdf_data(self, file) -> dict:
-        """Extract text, page count, and hyperlinks from PDF."""
+        """Extract text, page count, and hyperlinks from PDF using PyMuPDF (fitz)."""
         try:
-            file.seek(0) # Reset pointer
-            reader = PdfReader(file)
-            text = "\n".join([page.extract_text() or "" for page in reader.pages])
-            pages = len(reader.pages)
+            # Read file bytes
+            file.seek(0)
+            pdf_bytes = file.read()
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             
-            # Extract Metadata Links (Annotations)
+            text = ""
             links = []
-            for page in reader.pages:
-                if "/Annots" in page:
-                    for annot in page["/Annots"]:
-                        try:
-                            obj = annot.get_object()
-                            if "/A" in obj and "/URI" in obj["/A"]:
-                                uri = obj["/A"]["/URI"]
-                                links.append(uri)
-                        except:
-                            continue
             
-            # Extract Text Links (Regex Fallback)
-            # Remove parentheses/trailing punctuation often caught by regex
+            for page in doc:
+                text += page.get_text() + "\n"
+                
+                # Extract Links (URI)
+                page_links = page.get_links()
+                for link in page_links:
+                    if "uri" in link:
+                        links.append(link["uri"])
+            
+            # Extract Text Links (Regex Fallback for non-hyperlinked text URLs)
             raw_links = re.findall(r'(https?://[^\s\)\}\],]+)', text)
             # Add https prefix to shorthand links if missing
             raw_links += [f"https://{l}" if not l.startswith("http") else l for l in re.findall(r'(?:github\.com/[^\s\)\}\],]+)', text)]
@@ -242,7 +240,7 @@ class TalAgent:
             
             return {
                 "text": text.strip(),
-                "pages": pages,
+                "pages": len(doc),
                 "links": all_links
             }
         except Exception as e:
