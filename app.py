@@ -407,12 +407,14 @@ class TalAgent:
         5. **jd alignment**: scan the 'need to have' section of the jd. ensure key skills (e.g. react, typescript, redux) appear in the experience bullets if the candidate has them.
         
         🚨 formatting rules (violation = failure) 🚨
-        1. **full 1-page density**: the final pdf must completely fill 1 page (no large whitespace at bottom).
-           - **include all relevant roles**: do not arbitrarily cut roles. include all roles relevant to the target job (especially frontend/ui roles).
-           - **bullet count**: use 3-5 bullets for recent/relevant roles to fill the page. use 2-3 for older roles.
-           - **projects**: include top 2-3 relevant projects.
-           - **overflow handling**: only if content exceeds 1 page, *then* trim the oldest/least relevant role or reduce bullet count. do not start by cutting.
+        1. **strict 1-page limit**: the resume must fit on exactly 1 page.
+           - **bullet strategy**: max 3 bullets for the most recent role. max 2 bullets for older roles.
+           - **cut logic (if > 1 page)**:
+             1. remove the oldest/least relevant project (e.g. basic school projects).
+             2. remove "patents", "publications", or "volunteering" sections entirely.
+             3. remove the oldest work experience if it's not relevant to the target role.
            - **do not cut education**: keep all education entries (university and high school).
+           - **density**: fill the page comfortably (85-100%), but prioritize *not* spilling over.
         2. **skill filtering**:
            - remove these irrelevant skills: {irrelevant_skills}
         3. **links**:
