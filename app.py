@@ -126,14 +126,18 @@ LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 \raggedright
 \setlength{\tabcolsep}{0in}
 
+% Sections formatting
 \titleformat{\section}{
   \vspace{-4pt}\scshape\raggedright\large\bfseries
 }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
 \pdfgentounicode=1
 
+% Custom Bullet Size Command - Re-definable by AI
+\newcommand{\resumeBulletSize}{\small} 
+
 \newcommand{\resumeItem}[1]{
-  \item\small{
+  \item\resumeBulletSize{
     {#1 \vspace{-2pt}}
   }
 }
@@ -164,8 +168,8 @@ LATEX_TEMPLATE = r"""% Jake's Resume Template - ATS Optimized
 
 % HEADER
 \begin{center}
-    {\Huge \scshape FULL_NAME} \\ \vspace{1pt}
-    {\hypersetup{urlcolor=black} CONTACT_INFO}
+    {\Huge \scshape FULL_NAME} \\ \vspace{2pt}
+    {\hypersetup{urlcolor=black} \small CONTACT_INFO}
 \end{center}
 
 % EDUCATION
@@ -248,53 +252,69 @@ class TalAgent:
 
     def analyze_resume(self, resume_text: str, jd_text: str) -> dict:
         """
-        Perform deep analysis of resume vs JD using Search Grounding.
-        Returns structured JSON.
+        Perform deep analysis using the new Dynamic Strategy Engine.
+        Determines archetypes and creates a precise Execution Plan.
         """
         prompt = f"""
-        you are tal, a brutal but helpful career mentor.
+        You are Tal, a brutal but genius career strategist.
         
-        task 1: research
-        - use google search to find the specific "tech stack", "culture", and "stage" (startup vs corporate) of the company.
-        - find what skills/outcomes they value most right now.
+        TASK 1: ARCHETYPE DETECTION (Using Search)
+        - Search Google for the company to determine its "Company Archetype":
+          - "Early Stage": <50 employees, chaos, needs builders/generalists.
+          - "Growth Stage": 50-500 employees, scaling, needs processes/specialists.
+          - "Corporate": >500 employees, stable, needs compliance/politics/depth.
+        - Determine the "Role Archetype" based on JD:
+          - "Engineering": Focus on stack, scale, complexity.
+          - "Product": Focus on user, metrics, strategy.
+          - "Growth/Marketing": Focus on CAC, revenue, experiments.
+          - "Research": Focus on patents, publications, novelty.
+          - "Generalist": Ops, Chief of Staff, Founder's Office.
         
-        task 2: strategy
-        - define a "role translation strategy": how to frame the candidate's *actual* experience to fit this role?
-        - explain this strategy directly to the user (e.g. "look, i need to rebrand your support role as customer success...").
-        - identify "irrelevant skills" to cut.
-        - **missing keywords**: identify specific **technical hard skills, tools, languages, or frameworks** (e.g. "python", "aws", "react", "tableau") missing from the resume that are crucial for the jd. **do not** list soft skills like "leadership", "communication", or "kpi tracking".
-        - **missing keywords**: identify specific **hard skills, tools, languages, or frameworks** (e.g. "python", "aws", "react") missing from the resume that are crucial for the jd. **ignore soft skills** like "communication" or "stakeholder management".
+        TASK 2: STRATEGY & CONTENT PLAN
+        - Define a "Role Translation Strategy": How to frame the candidate's past for *this* specific future.
+        - Create a strictly defined CONTENT PLAN for the resume generator to follow:
+          - **keep_sections**: Which sections MUST stay? (e.g. "Experience", "Projects").
+          - **drop_sections**: Which sections MUST go to save space? (e.g. "Volunteering", "Patents" if irrelevant).
+          - **top_projects**: Select exactly 2 strongest projects that match the JD best. Drop the rest.
+          - **bullet_strategy**: "Dense" (for corp), "Punchy" (for startup), "Technical" (for eng).
         
-        resume:
+        TASK 3: GAP ANALYSIS
+        - **missing_hard_skills**: critical tech/tools missing (e.g. "Python", "Salesforce"). IGNORE soft skills.
+        - **irrelevant_terms**: Buzzwords to kill (e.g. "synergy", "kpi tracking").
+        
+        RESUME:
         {resume_text[:10000]}
         
-        job description:
+        JOB DESCRIPTION:
         {jd_text[:5000]}
         
-        return a json object with this exact schema.
-        keep text extremely short and punchy. max 10-15 words per string.
-        
+        Return a JSON object with this exact schema (all keys lowercase):
         {{
-            "company_name": "extracted company name (or 'this company')",
-            "role_title": "extracted job title (or 'this role')",
-            "company_stage": "startup / scaleup / corporate",
-            "role_translation_strategy": "direct explanation of the rebrand strategy to the user (max 20 words)",
-            "missing_keywords": ["list", "of", "critical", "missing", "keywords"],
-            "irrelevant_skills": ["list", "of", "skills", "to", "remove"],
+            "company_name": "extracted name",
+            "role_title": "extracted title",
+            "company_archetype": "early stage / growth stage / corporate",
+            "role_archetype": "engineering / product / growth / research / generalist",
+            "role_translation_strategy": "Direct strategy explanation to user (max 15 words)",
+            "content_plan": {{
+                "keep_sections": ["list", "of", "sections"],
+                "drop_sections": ["list", "of", "sections"],
+                "top_projects": ["project 1", "project 2"],
+                "bullet_guidelines": "specific instruction for bullet writing"
+            }},
+            "missing_keywords": ["list", "of", "hard", "skills"],
+            "irrelevant_skills": ["list", "of", "terms", "to", "cut"],
             "good_points": [
-                {{"point": "strength description", "why": "why it matters"}}
+                {{"point": "strength", "why": "reason"}}
             ],
             "needs_fixing": [
-                {{"issue": "biggest red flag or misalignment", "impact": "why this is a dealbreaker"}}
+                {{"issue": "red flag", "impact": "consequence"}}
             ],
             "proposed_changes": [
-                {{"change": "what you will change", "rationale": "why this helps"}}
+                {{"change": "action", "rationale": "reason"}}
             ],
             "score_before": 50,
-            "score_after": 85
+            "score_after": 90
         }}
-        
-        important: in 'needs_fixing', put the single biggest red flag first. be direct.
         """
         
         try:
@@ -310,135 +330,166 @@ class TalAgent:
             return json.loads(response.text)
         except Exception as e:
             st.error(f"Analysis failed: {e}")
-            # Robust Fallback
             return {
                 "company_name": "the company",
                 "role_title": "the role",
-                "company_stage": "corporate",
-                "role_translation_strategy": "look, i'll frame your general skills for this generic role",
-                "missing_keywords": ["key skills", "metrics"],
+                "company_archetype": "corporate",
+                "role_archetype": "generalist",
+                "role_translation_strategy": "Standard professional alignment",
+                "content_plan": {
+                    "keep_sections": ["Experience", "Education", "Projects"],
+                    "drop_sections": ["Volunteering"],
+                    "top_projects": ["Most recent project"],
+                    "bullet_guidelines": "Standard STAR method"
+                },
+                "missing_keywords": ["relevant skills"],
                 "irrelevant_skills": [],
-                "good_points": [{"point": "experience listed", "why": "shows history"}],
-                "needs_fixing": [{"issue": "generic descriptions", "impact": "low engagement"}],
-                "proposed_changes": [{"change": "quantify impact", "rationale": "prove value"}],
+                "good_points": [{"point": "Experience matches", "why": "Relevant history"}],
+                "needs_fixing": [{"issue": "Generic descriptions", "impact": "Low impact"}],
+                "proposed_changes": [{"change": "Add metrics", "rationale": "Show value"}],
                 "score_before": 50,
                 "score_after": 80
             }
 
     def generate_cold_dm(self, resume_text: str, jd_text: str, company_name: str, analysis: dict = None) -> str:
-        """Generate a single, deeply researched cold dm using google search."""
+        """
+        Generate a highly targeted cold DM based on the Company Archetype.
+        """
         
-        # Extract best points from analysis if available
-        highlights = ""
+        # Extract dynamic context
+        company_archetype = "growth stage"
+        role_archetype = "generalist"
         strongest_point = "my background"
+        
         if analysis:
+            company_archetype = analysis.get('company_archetype', 'growth stage').lower()
+            role_archetype = analysis.get('role_archetype', 'generalist').lower()
             good_points = [p.get('point', '') for p in analysis.get('good_points', [])]
             if good_points:
                 strongest_point = good_points[0].lower()
-            highlights = f"\ncandidate strengths: {', '.join([p.lower() for p in good_points])}"
-        
+
         prompt = f"""
-        you are an elite career strategist.
+        You are an elite career strategist.
         
-        task: write one high-impact cold dm to a hiring manager or founder at {company_name}.
+        CONTEXT:
+        - Target Company: {company_name} ({company_archetype})
+        - Role: {role_archetype}
+        - Candidate's "Ace Card": "{strongest_point}"
         
-        research instructions (use google search):
-        1. search for "{company_name} strategy 2026", "{company_name} recent news", "{company_name} blog".
-        2. search for "{company_name} founders" or "hiring manager for [role]".
-        3. find a specific insight: a recent product launch, a strategic pivot, a funding round, or a founder's quote.
+        TASK: Write ONE high-impact Cold DM (max 50 words) to a Hiring Manager or Founder.
         
-        drafting instructions:
-        - hook: start with the specific insight you found. show you did homework. (e.g. "just read your post on x...", "saw the series b announcement...").
-        - bridge: connect that insight to the candidate's strongest point: "{strongest_point}".
-        - ask: "open to a 10-min chat?"
+        TONE STRATEGY (Based on Archetype):
+        - If "Early Stage": "Builder Energy". Direct, slightly chaotic, "I ship fast", "I solve pain". Reference a specific problem they have.
+        - If "Growth Stage": "Value Energy". Quantitative, "I scaled X to Y", "I built the system you need". Reference their recent win/round.
+        - If "Corporate": "Professional Precision". Polished, "I specialize in [Domain]", "I led [Project] at [Top Firm]". Reference a strategic initiative.
         
-        critical constraints:
-        - max 50 words.
-        - no fluff ("i hope you are well", "i'm a big fan").
-        - no generic praise.
-        - tone: witty and direct.
+        RESEARCH INSTRUCTIONS (Use Google Search):
+        1. Search for "{company_name} recent news", "{company_name} funding", "{company_name} product launch".
+        2. Find a SPECIFIC HOOK (e.g. "Series B raise", "New AI feature", "Expansion to US").
         
-        resume summary:
+        STRUCTURE:
+        1. **The Hook**: "Saw you just launched X..." or "Congratz on the Series A..." (Show you know them).
+        2. **The Leverage**: "At [My Past Company], I built the exact system you need for Y..." (Connect YOUR ace card to THEIR problem).
+        3. **The Ask**: "Open to a 10-min intro?"
+        
+        CONSTRAINTS:
+        - NO fluff ("Hope you are well").
+        - NO generic praise ("Love what you're doing").
+        - STRICTLY under 50 words.
+        - All text must be lowercase (style choice).
+        
+        RESUME SUMMARY:
         {resume_text[:2000]}
         
-        job description summary:
+        JOB DESCRIPTION:
         {jd_text[:2000]}
-        {highlights}
         
-        output:
-        return only the message text.
+        Output only the message text.
         """
         
         try:
-            # Enable Google Search Grounding
             response = self.client.models.generate_content(
                 model=MODEL_NAME,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     tools=[types.Tool(google_search=types.GoogleSearch())],
-                    temperature=0.8,
+                    temperature=0.7,
                 )
             )
-            return response.text.strip()
+            return response.text.strip().lower()
         except Exception as e:
-            # Fallback if search unavailable
-            return f"hi [name], i've been following {company_name} and noticed your work on [specific project from jd]. my background matches this perfectly. let's chat? (search unavailable: {e})"
+            return f"hi [name], saw {company_name} is scaling {role_archetype} - i built similar systems at my last role. open to a 10-min chat? (search unavailable)"
 
     def generate_latex_content(self, resume_text: str, jd_text: str, analysis: dict, links: list, max_pages: int = 1) -> str:
-        """Generate the full LaTeX code for the resume."""
+        """
+        Generate LaTeX using the strict 'Brain & Hands' architecture.
+        The 'Hands' (this function) must purely execute the 'Brain's' (analysis) Content Plan.
+        """
         
+        # Extract the Content Plan from the Brain
+        content_plan = analysis.get("content_plan", {})
+        keep_sections = content_plan.get("keep_sections", ["Experience", "Projects", "Education"])
+        drop_sections = content_plan.get("drop_sections", [])
+        top_projects = content_plan.get("top_projects", [])
+        bullet_guidelines = content_plan.get("bullet_guidelines", "Standard professional bullets")
+        
+        # Other Strategy Elements
         company = analysis.get("company_name", "the company").lower()
         role = analysis.get("role_title", "the role").lower()
-        strategy = analysis.get("role_translation_strategy", "focus on relevant impact.").lower()
-        irrelevant_skills = [s.lower() for s in analysis.get("irrelevant_skills", [])]
+        strategy = analysis.get("role_translation_strategy", "Focus on impact").lower()
+        irrelevant_terms = [s.lower() for s in analysis.get("irrelevant_skills", [])]
         
-        # Verify links are strings to be safe
+        # Link Handling
         clean_links = [str(l) for l in links if isinstance(l, str)]
         links_str = "\n".join(clean_links)
         
         prompt = f"""
-        you are an expert resume writer using latex.
+        You are an obedient LaTeX generator. You have NO creative license. 
+        You must STRICTLY execute the provided CONTENT PLAN to build a 1-page resume.
         
-        🚨 strategy & authenticity 🚨
-        1. **execute this strategy**: "{strategy}"
-        2. **be authentic**: do NOT invent titles or experience. highlight *transferable impact*.
-        3. **punchy impact**: use strong action verbs. be concise but impressive.
-        4. **bold metrics**: bold specific numbers, outcomes, and keywords (e.g. \\textbf{{30\% increase}}, \\textbf{{python}}).
-        5. **jd alignment**: scan the 'need to have' section of the jd. ensure key skills (e.g. react, typescript, redux) appear in the experience bullets if the candidate has them.
+        CONTENT PLAN (The Law):
+        1. **KEEP Sections**: {keep_sections} ONLY.
+        2. **DROP Sections**: {drop_sections} (Do NOT include these headers or content).
+        3. **PROJECTS**: Include ONLY these specific projects: {top_projects}. DELETE ALL OTHERS.
+        4. **BULLET STRATEGY**: {bullet_guidelines}.
+        5. **IRRELEVANT TERMS**: Remove mentions of: {irrelevant_terms}.
         
-        🚨 formatting rules (violation = failure) 🚨
-        1. **strict 1-page limit**: the resume must fit on exactly 1 page.
-           - **bullet strategy**: max 3 bullets for the most recent role. max 2 bullets for older roles.
-           - **cut logic (if > 1 page)**:
-             1. remove the oldest/least relevant project (e.g. basic school projects).
-             2. remove "patents", "publications", or "volunteering" sections entirely.
-             3. remove the oldest work experience if it's not relevant to the target role.
-           - **do not cut education**: keep all education entries (university and high school).
-           - **density**: fill the page comfortably (85-100%), but prioritize *not* spilling over.
-        2. **skill filtering**:
-           - remove these irrelevant skills: {irrelevant_skills}
-        3. **links**:
-           - only use these verified links:
-           {links_str}
-           - format: \\href{{URL}}{{\\textbf{{display text}}}}
-           - display text: use the original name found in the resume. do NOT rename.
-           - **critical**: if a project in the input has multiple links (e.g. video | website | github), you must include all of them. do not drop any.
+        STRATEGY ALIGNMENT:
+        - "Role Strategy": {strategy}
+        - "Anti-Hallucination": Do NOT invent skills. Only use what is in the input resume.
         
-        task: rewrite this resume for the {role} role at {company}.
+        LATEX RULES:
+        1. **One Page Limit (DRACONIAN)**:
+           - The resume MUST fit on exactly 1 page.
+           - **Project Limit**: STRICTLY MAX 2 PROJECTS. If the plan lists more, ignore them.
+           - **If content is DENSE**: Add `\\renewcommand{{\\resumeBulletSize}}{{\\footnotesize}}` immediately after `\\documentclass` to shrink bullet text.
+           - **If content is SPARSE (<85%)**: Write longer, more detailed descriptions to fill the page. Do NOT leave it empty.
+        2. **Header Formatting**:
+           - **Dynamic Icons**: Use `fontawesome5` icons ONLY for links that exist in the input.
+           - Format Example: `\\faEnvelope` email@domain.com $|$ `\\faLinkedin` LinkedIn $|$ `\\faGithub` GitHub
+           - **Rule**: If a link (like Portfolio) is missing, do NOT include its icon or separator.
+        3. **Formatting**:
+           - **Bold** key metrics (e.g. \\textbf{{$2M revenue}}, \\textbf{{30% growth}}).
+           - **Bold** hard skills (e.g. \\textbf{{Python}}, \\textbf{{React}}).
+           - Links: \\href{{url}}{{\\textbf{{display_text}}}} (Blue & Bold).
+        4. **Education Mandate**:
+           - Keep ALL education entries (University AND High School/Grade 12). Do not cut them.
+           - Keep ALL grades, CGPA, and percentages exactly as they appear in the input. Do NOT remove them.
+        5. **Links**:
+           - Use these links: {links_str}
+           - Exact match project names to links.
         
-        resume content:
+        INPUT RESUME:
         {resume_text}
         
-        target jd:
+        TARGET JD:
         {jd_text}
         
-        latex template start:
+        LATEX TEMPLATE START:
         {LATEX_TEMPLATE}
         
-        output:
-        return only the raw latex code (starting with \\documentclass).
-        - the hyperref package and link colors are already configured in the template above. do not add another \\usepackage{{hyperref}} or change link colors.
-        - ensure all hyperlinks are functional.
+        OUTPUT:
+        Return ONLY the raw LaTeX code starting with \\documentclass.
         """
         
         try:
@@ -446,21 +497,19 @@ class TalAgent:
                 model=MODEL_NAME,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.2,
+                    temperature=0.2, # Low temperature for strict execution
                 )
             )
             latex = response.text or ""
+            
+            # Post-processing cleanup
+            latex = re.sub(r"^```(?:latex|tex)?\s*\n", "", latex, flags=re.MULTILINE)
+            latex = re.sub(r"\n```\s*$", "", latex, flags=re.MULTILINE)
+            return latex.strip()
+            
         except Exception as e:
             st.error(f"Resume generation failed: {e}")
-            # Fallback: return a minimal LaTeX document with an error note
-            latex = LATEX_TEMPLATE.replace("FULL_NAME", "Tal Resume (Generation Error)").replace(
-                "EDUCATION_CONTENT", "Unfortunately, something went wrong while generating your resume."
-            ).replace("EXPERIENCE_CONTENT", "").replace("PROJECTS_CONTENT", "").replace("SKILLS_CONTENT", "")
-        
-        # Clean up possible markdown fences
-        latex = re.sub(r"^```(?:latex|tex)?\s*\n", "", latex, flags=re.MULTILINE)
-        latex = re.sub(r"\n```\s*$", "", latex, flags=re.MULTILINE)
-        return latex.strip()
+            return LATEX_TEMPLATE.replace("FULL_NAME", "Error Generating Resume")
 
     def compile_pdf(self, latex_content: str) -> tuple[bytes, str]:
         """Try to compile LaTeX to PDF using external services."""
@@ -517,6 +566,8 @@ def format_analysis_display(analysis: dict) -> str:
     
     company = analysis.get("company_name", "the company")
     role = analysis.get("role_title", "this role")
+    c_arch = analysis.get("company_archetype", "company")
+    r_arch = analysis.get("role_archetype", "role")
     
     # Fix "role role" redundancy
     if role.lower().endswith(" role") or role.lower() == "this role":
@@ -527,10 +578,25 @@ def format_analysis_display(analysis: dict) -> str:
     lines = []
     lines.append(f"alright i've analyzed your resume for the **{role_str}** at **{company}**\n\n")
     
+    # Archetype & Strategy Block
+    lines.append(f"**archetype detected:** {c_arch} + {r_arch}")
+    
+    strategy = analysis.get("role_translation_strategy", "Focus on relevant impact.")
+    lines.append(f"**strategy:** \"{strategy.lower()}\"\n")
+
+    # Content Plan (What we are doing)
+    content_plan = analysis.get("content_plan", {})
+    if content_plan:
+        kept = len(content_plan.get("keep_sections", []))
+        dropped = len(content_plan.get("drop_sections", []))
+        top_proj = len(content_plan.get("top_projects", []))
+        lines.append(f"**the plan:** keeping {kept} sections, dropping {dropped} fluff sections, highlighting top {top_proj} projects.")
+        lines.append("")
+
     # Missing Keywords
     missing = analysis.get("missing_keywords", [])
     if missing:
-        lines.append(f"**missing keywords:** {', '.join(missing[:5]).lower()}\n\n")
+        lines.append(f"**missing hard skills:** {', '.join(missing[:5]).lower()}\n")
     
     # Good Points (Max 3)
     lines.append("**what's working:**")
@@ -542,16 +608,6 @@ def format_analysis_display(analysis: dict) -> str:
     lines.append("**what needs fixing:**")
     for item in analysis.get("needs_fixing", [])[:2]:
         lines.append(f"- {item.get('issue', '').lower()}")
-    lines.append("") # Spacer
-    
-    # Strategy (New)
-    strategy = analysis.get("role_translation_strategy", "Focus on relevant impact.")
-    lines.append(f"**tal's strategy:** \"{strategy.lower()}\"\n\n")
-    
-    # Execution (Changes)
-    lines.append("**execution:**")
-    for item in analysis.get("proposed_changes", [])[:2]:
-        lines.append(f"- {item.get('change', '').lower()}")
     lines.append("") # Spacer
     
     # Score Jump - Green Block
